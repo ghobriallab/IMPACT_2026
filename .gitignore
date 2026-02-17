@@ -1,0 +1,8 @@
+figures/
+__pycache__/
+*.pyc
+.DS_Store
+*.h5ad
+
+# Data files (hosted on Zenodo, not in repo)
+data/
