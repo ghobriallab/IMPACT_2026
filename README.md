@@ -14,7 +14,7 @@ The IMPACT study examines immune dysfunction in myeloma precursor conditions (MG
 
 The processed single-cell RNA-seq object and TCR data are deposited on Zenodo:
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18989223.svg)](https://doi.org/10.5281/zenodo.18989223)
+(https://zenodo.org/badge/DOI/10.5281/zenodo.18989223.svg)](https://doi.org/10.5281/zenodo.18989223)
 
 | File | Description | Size |
 |------|-------------|------|
