@@ -35,16 +35,6 @@ python tools/check_reproducibility.py --json
 
 # Fail (exit 1) if score is below 80
 python tools/check_reproducibility.py --min-score 80
-
-# In Claude Code (slash command)
-/check-repro
-/check-repro /path/to/project
-```
-
-If you are working inside the `compbio-commons` repo itself, you can also use the pixi shorthand:
-
-```bash
-pixi run check-repro
 ```
 
 ### Score interpretation

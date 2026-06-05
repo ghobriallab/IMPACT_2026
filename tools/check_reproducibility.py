@@ -53,7 +53,7 @@ PHI_PATTERNS = [
     (re.compile(r'(?i)(password|passwd|secret|api_key|auth_token)\s*=\s*["\']?\S'), "Credential"),
     (re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'), "Email address"),
 ]
-IGNORED_DIRS = {".git", ".claude", "__pycache__", ".ipynb_checkpoints", "node_modules", ".venv", "venv", ".pixi"}
+IGNORED_DIRS = {".git", "__pycache__", ".ipynb_checkpoints", "node_modules", ".venv", "venv", ".pixi"}
 NUMERIC_PREFIX_RE = re.compile(r'^\d{2,3}[_\-]')
 BAD_NAME_CHARS_RE = re.compile(r'[ ()\[\]&;!]')
 

@@ -20,7 +20,6 @@ jobs:
         run: |
           if [ ! -f "tools/check_reproducibility.py" ]; then
             echo "ERROR: tools/check_reproducibility.py not found."
-            echo "Run the sync-claude-config workflow from common-base-scripts first."
             exit 1
           fi
 
