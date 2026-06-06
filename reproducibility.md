@@ -1,5 +1,24 @@
 # Reproducibility History
 
+## 2026-06-06 — Score: 100/100 (Good)
+
+| Category | Score |
+|----------|-------|
+| Step Ordering | 20/20 |
+| Documentation | 25/25 |
+| Path Hygiene | 20/20 |
+| Gcs Data Handling | 15/15 |
+| Naming Conventions | 10/10 |
+| Phi   Credential Safety | 10/10 |
+
+**Top issues:**
+- [Step Ordering] 4/28 scripts lack a numeric prefix (e.g. 01_, 02_): environment.R, config.R, config.py (+1 more)
+
+_Run at 2026-06-06T10:09:06Z by [run-reproducibility-check](https://github.com/Noeperron/IMPACT_2026/actions/runs/27059457378)_
+
+---
+
+
 ## 2026-05-30 — Score: 54/100 (Critical)
 
 | Category | Score |
