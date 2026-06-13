@@ -1,5 +1,24 @@
 # Reproducibility History
 
+## 2026-06-13 — Score: 100/100 (Good)
+
+| Category | Score |
+|----------|-------|
+| Step Ordering | 20/20 |
+| Documentation | 25/25 |
+| Path Hygiene | 20/20 |
+| Gcs Data Handling | 15/15 |
+| Naming Conventions | 10/10 |
+| Phi   Credential Safety | 10/10 |
+
+**Top issues:**
+- [Step Ordering] 4/28 scripts lack a numeric prefix (e.g. 01_, 02_): environment.R, config.py, config.R (+1 more)
+
+_Run at 2026-06-13T10:31:09Z by [run-reproducibility-check](https://github.com/ghobriallab/IMPACT_2026/actions/runs/27464238951)_
+
+---
+
+
 ## 2026-06-06 — Score: 100/100 (Good)
 
 | Category | Score |
