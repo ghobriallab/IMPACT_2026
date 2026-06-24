@@ -71,7 +71,9 @@ data/
 ├── metadata/
 │   └── metadata_deidentified.csv
 ├── external/
-│   └── GSE193531_cell-level-metadata.csv
+│   ├── GSE193531_cell-level-metadata.csv
+│   ├── PrePostTEC_olink_deid.csv
+│   └── PrePostTEC_cohort_deid.csv
 ├── il1b_response_genes_human.csv
 ├── hvg_2678_genes.txt
 ├── smm_risk_strat.csv
@@ -130,6 +132,7 @@ Folders carry a numeric prefix matching their manuscript-figure order, and scrip
 | 2B | `02_Figure2/01_Figure2B.R` | R | MMR antibody titers (HD vs SMM) |
 | 2D | `02_Figure2/02_Figure2D.R` | R | Plasma APRIL (TNFSF13) Olink levels, paired pre/post |
 | 2E | `02_Figure2/03_Figure2E.R` | R | Post-vaccination APRIL vs serum M-spike (Spearman, treatment-naive SMM) |
+| 2F | `02_Figure2/04_Figure2F.py` | Python | Paired pre/post-teclistamab plasma Olink for APRIL / BAFF / sBCMA (n=10 HRSMM on the teclistamab arm of Immuno-PRISM, NCT05469893); composite 3-protein decoy-sink readout |
 | 3B (UMAP) | `03_Figure3/01_Figure3C.py` | Python | Full UMAP with Annotation_Level_2 labels |
 | 3C (myeloid APRIL) | `03_Figure3/02_Figure3D.py` | Python | Myeloid TNFSF13 expression, pre vs post, age+sex adjusted |
 | 3D (B-cell APRIL module) | `03_Figure3/03_Figure3E.py` | Python | APRIL-responsive module score, treatment-naive HD/MGUS/SMM |
@@ -150,6 +153,7 @@ Folders carry a numeric prefix matching their manuscript-figure order, and scrip
 | S3 | `06_SupplementalFigures/03_SupFig3.py` | Python | Bone-marrow myeloid TNFSF13 (APRIL) across HD/MGUS/SMM/MM (Zavidij GSE124310) |
 | S4 | `06_SupplementalFigures/04_SupFig4.py` | Python | External validation of the APRIL-responsive gene signature (GSE205101 / GSE173644) |
 | S5 | `06_SupplementalFigures/05_SupFig5.py` | Python | Individual APRIL-responsive gene violins (HD vs SMM, post-vaccination) |
+| S6 | `06_SupplementalFigures/06_SupFig6.R` | R | Sample shipping (FedEx vs not-shipped) does not confound SARS-CoV-2 spike-specific TCR clonotype frequencies (paired-design control for Figure 4B) |
 
 ### Execution order
 
