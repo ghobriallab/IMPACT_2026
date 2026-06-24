@@ -21,7 +21,7 @@ Treatment-naive Olink cohort: the single MGUS patient with prior systemic therap
 - `data/olink/olink_cytokines.csv` — paired Olink cytokine matrix (panels 5A/B/D/E/F).
 - `scRNAseq_IMPACT_Zenodo.h5ad` + `data/hvg_2678_genes.txt` (control pool) + `data/il1b_response_genes_human.csv` (gene set) — for panel 5C.
 
-All inputs are hosted on Zenodo (DOI [10.5281/zenodo.18989223](https://doi.org/10.5281/zenodo.18989223)). To mirror the deposit to an internal Google Cloud Storage bucket: `gsutil cp gs://your-bucket/impact_data/scRNAseq_IMPACT_Zenodo.h5ad .` and `gsutil cp -r gs://your-bucket/impact_data/olink data/`.
+All inputs are hosted on Zenodo (DOI [10.5281/zenodo.18989222](https://doi.org/10.5281/zenodo.18989222)). To mirror the deposit to an internal Google Cloud Storage bucket: `gsutil cp gs://your-bucket/impact_data/scRNAseq_IMPACT_Zenodo.h5ad .` and `gsutil cp -r gs://your-bucket/impact_data/olink data/`.
 
 ## Run
 

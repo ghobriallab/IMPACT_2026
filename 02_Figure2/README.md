@@ -22,7 +22,7 @@ Treatment-naive Olink cohort: the single MGUS patient with prior systemic therap
 - `data/olink/olink_summary_tumor_burden.csv` — Olink with linked tumor-burden metrics (panel 2E).
 - `data/external/PrePostTEC_olink_deid.csv` — de-identified paired plasma Olink (APRIL / BAFF / sBCMA) pre- and post-teclistamab in 10 HRSMM participants from Immuno-PRISM (panel 2F).
 
-All inputs are hosted on Zenodo (DOI [10.5281/zenodo.18989223](https://doi.org/10.5281/zenodo.18989223)). To mirror the deposit to an internal Google Cloud Storage bucket, copy the Zenodo file tree into your bucket and use `gsutil cp -r gs://your-bucket/impact_data/olink data/` to populate the layout the scripts expect.
+All inputs are hosted on Zenodo (DOI [10.5281/zenodo.18989222](https://doi.org/10.5281/zenodo.18989222)). To mirror the deposit to an internal Google Cloud Storage bucket, copy the Zenodo file tree into your bucket and use `gsutil cp -r gs://your-bucket/impact_data/olink data/` to populate the layout the scripts expect.
 
 ## Run
 

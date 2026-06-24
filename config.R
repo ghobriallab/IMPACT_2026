@@ -19,7 +19,7 @@ if (is.null(REPO_DIR) || REPO_DIR == "") {
   REPO_DIR <- getwd()
 }
 
-# Data files (download from Zenodo: https://doi.org/10.5281/zenodo.18989223)
+# Data files (download from Zenodo: https://doi.org/10.5281/zenodo.18989222)
 DATA_DIR <- file.path(REPO_DIR, "..", "data")
 
 # Output directory for figures

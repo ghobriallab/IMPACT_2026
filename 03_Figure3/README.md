@@ -17,7 +17,7 @@ Per-timepoint, age- and sex-adjusted rank-based ANCOVA + BH for the myeloid pane
 
 ## Inputs
 
-- `scRNAseq_IMPACT_Zenodo.h5ad` — the de-identified comprehensive scRNA-seq object (1.4M cells, 42k genes, normalized log1p X + int64 `counts` layer + `obsm['X_umap']` + obs columns `Annotation_Level_1`, `Annotation_Level_2`, `Diagnosis`, `Timepoint`, `TreatmentStatus`). Download from Zenodo (DOI [10.5281/zenodo.18989223](https://doi.org/10.5281/zenodo.18989223)) and point `SCRNA_DIR` in `../config.py` at the containing directory. If you mirror the deposit to an internal Google Cloud Storage bucket, `gsutil cp gs://your-bucket/impact_data/scRNAseq_IMPACT_Zenodo.h5ad .` puts it where the scripts expect.
+- `scRNAseq_IMPACT_Zenodo.h5ad` — the de-identified comprehensive scRNA-seq object (1.4M cells, 42k genes, normalized log1p X + int64 `counts` layer + `obsm['X_umap']` + obs columns `Annotation_Level_1`, `Annotation_Level_2`, `Diagnosis`, `Timepoint`, `TreatmentStatus`). Download from Zenodo (DOI [10.5281/zenodo.18989222](https://doi.org/10.5281/zenodo.18989222)) and point `SCRNA_DIR` in `../config.py` at the containing directory. If you mirror the deposit to an internal Google Cloud Storage bucket, `gsutil cp gs://your-bucket/impact_data/scRNAseq_IMPACT_Zenodo.h5ad .` puts it where the scripts expect.
 - External validation (panel 3E): `data/external/GSE193531_cell-level-metadata.csv` (companion cell-level malignant/normal calls from inferCNV) shipped in the Zenodo deposit; the UMI matrix is fetched from GSE193531 directly.
 
 ## Run

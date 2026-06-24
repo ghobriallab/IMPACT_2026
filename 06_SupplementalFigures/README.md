@@ -21,7 +21,7 @@ Same conventions as the main figures: age- and sex-adjusted rank-based ANCOVA fo
 - `data/elisa/elisa_spike_post2nd.csv`, `elisa_spike_post3rd.csv`, `data/smm_risk_strat.csv` for the risk-tier panels (S1).
 - External GSE124310 (Zavidij) sample matrices for S3; GSE205101 / GSE173644 in-vitro APRIL stimulation matrices for S4.
 
-All in-house inputs are hosted on Zenodo (DOI [10.5281/zenodo.18989223](https://doi.org/10.5281/zenodo.18989223)). To mirror the deposit to an internal Google Cloud Storage bucket, copy the whole Zenodo file tree into your bucket and `gsutil cp -r gs://your-bucket/impact_data/ data/` reproduces the expected layout for the SupplementalFigures scripts.
+All in-house inputs are hosted on Zenodo (DOI [10.5281/zenodo.18989222](https://doi.org/10.5281/zenodo.18989222)). To mirror the deposit to an internal Google Cloud Storage bucket, copy the whole Zenodo file tree into your bucket and `gsutil cp -r gs://your-bucket/impact_data/ data/` reproduces the expected layout for the SupplementalFigures scripts.
 
 ## Run
 

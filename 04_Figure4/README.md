@@ -19,7 +19,7 @@ The TCR clonotype data are computed against curated spike-specific and CEF-speci
 - `data/tcr/tcr_clonotype_proportions.rds` — per-patient ClusTCR proportions, pre and post vaccination (panels 4B/4C).
 - `data/elisa/elispot_spike_cef.csv` — well-level ELISPOT counts (panel 4E).
 
-All inputs are hosted on Zenodo (DOI [10.5281/zenodo.18989223](https://doi.org/10.5281/zenodo.18989223)). If you mirror to an internal Google Cloud Storage bucket, `gsutil cp -r gs://your-bucket/impact_data/tcr data/` and `gsutil cp -r gs://your-bucket/impact_data/elisa data/` reproduce the expected layout.
+All inputs are hosted on Zenodo (DOI [10.5281/zenodo.18989222](https://doi.org/10.5281/zenodo.18989222)). If you mirror to an internal Google Cloud Storage bucket, `gsutil cp -r gs://your-bucket/impact_data/tcr data/` and `gsutil cp -r gs://your-bucket/impact_data/elisa data/` reproduce the expected layout.
 
 ## Run
 

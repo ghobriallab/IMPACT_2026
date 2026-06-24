@@ -2,7 +2,7 @@
 
 Purpose:      Shared configuration for Python figure scripts: paths to the de-identified scRNA-seq h5ad files, data and figures directories, and the manuscript color palette.
 
-Inputs:       Edit SCRNA_DIR to point to the folder containing scRNAseq_IMPACT_Zenodo.h5ad (downloaded from Zenodo DOI 10.5281/zenodo.18989223).
+Inputs:       Edit SCRNA_DIR to point to the folder containing scRNAseq_IMPACT_Zenodo.h5ad (downloaded from Zenodo DOI 10.5281/zenodo.18989222).
 
 Outputs:      Module-level constants imported by every Python figure script (SCRNA_DIR, H5AD_*, DATA_DIR, FIGURES_DIR, COLORS).
 
@@ -14,7 +14,7 @@ from pathlib import Path
 REPO_DIR = Path(__file__).parent
 
 # Base directory containing scRNA-seq h5ad files
-# Download scRNAseq_IMPACT_Zenodo.h5ad from Zenodo (https://doi.org/10.5281/zenodo.18989223)
+# Download scRNAseq_IMPACT_Zenodo.h5ad from Zenodo (https://doi.org/10.5281/zenodo.18989222)
 # and edit this path to the directory containing it.
 SCRNA_DIR = Path("/path/to/scrnaseq_data")
 
@@ -30,7 +30,7 @@ H5AD_ANNOTATED = SCRNA_DIR / "scRNAseq_IMPACT_Zenodo.h5ad"
 H5AD_IL1B = SCRNA_DIR / "scRNAseq_IMPACT_Zenodo.h5ad"  # Figure5C subsets to the 2,678-HVG list (control pool)
 SUBCLUSTER_DIR = SCRNA_DIR / "subclusters"  # SupFig1 only; per-lineage subcluster objects (see README/notes)
 
-# Data files (download from Zenodo: https://doi.org/10.5281/zenodo.18989223)
+# Data files (download from Zenodo: https://doi.org/10.5281/zenodo.18989222)
 DATA_DIR = REPO_DIR / "data"
 
 # Output directory for figures

@@ -20,7 +20,7 @@ Cross-sectional disease-vs-HD contrasts use age- and sex-adjusted rank-based ANC
 - `data/elisa/elisa_spike_post3rd.csv` — de-identified post-3rd-dose ELISA titers (panel 1F).
 - `data/elisa/elisa_serial_titers_all.csv` and `elisa_serial_titers_filtered.csv` — serial titer trajectories (panels 1D/1E).
 
-All inputs are hosted on Zenodo (DOI [10.5281/zenodo.18989223](https://doi.org/10.5281/zenodo.18989223)). Edit `SCRNA_DIR` in `../config.py` / `../config.R` to point at your local copy. If you mirror the deposit to an internal Google Cloud Storage bucket (e.g. `gs://your-bucket/impact_data/`), `gsutil cp -r gs://your-bucket/impact_data/elisa data/` reproduces the layout expected by these scripts.
+All inputs are hosted on Zenodo (DOI [10.5281/zenodo.18989222](https://doi.org/10.5281/zenodo.18989222)). Edit `SCRNA_DIR` in `../config.py` / `../config.R` to point at your local copy. If you mirror the deposit to an internal Google Cloud Storage bucket (e.g. `gs://your-bucket/impact_data/`), `gsutil cp -r gs://your-bucket/impact_data/elisa data/` reproduces the layout expected by these scripts.
 
 ## Run
 

@@ -16,7 +16,7 @@ The scripts in this repository reproduce every main and supplementary figure pan
 
 The processed single-cell RNA-seq object and tabular data are deposited on Zenodo:
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18989223.svg)](https://doi.org/10.5281/zenodo.18989223)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18989222.svg)](https://doi.org/10.5281/zenodo.18989222)
 
 | File | Description | Size |
 |------|-------------|------|
