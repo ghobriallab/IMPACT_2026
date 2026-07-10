@@ -2,7 +2,7 @@
 
 Code repository for reproducing figures in:
 
-**"Myeloma Precursors Erode Durable Immunity"**
+**"Myeloma Precursors Undermine Durable Immunity"**
 
 ## Overview
 
