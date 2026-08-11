@@ -2,7 +2,7 @@
 
 Code repository for reproducing figures in:
 
-**"Myeloma Precursors Undermine Durable Immunity"**
+**"Myeloma precursors are associated with suboptimal immune responses to vaccination"**
 
 ## Overview
 

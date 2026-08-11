@@ -1,6 +1,6 @@
 # Figure 1 — Antibody waning
 
-Code to reproduce Figure 1 of *Myeloma Precursors Erode Durable Immunity*.
+Code to reproduce Figure 1 of *Myeloma precursors are associated with suboptimal immune responses to vaccination*.
 
 | Panel | Script | Description |
 |-------|--------|-------------|
