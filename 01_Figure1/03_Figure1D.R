@@ -11,8 +11,11 @@ library(lme4)
 # Read serial ELISA titer data
 dat <- read.csv(file.path(DATA_DIR, "elisa", "elisa_serial_titers_all.csv"))
 data_recoded <- dat %>% filter(Days_post2nd >= 14 & Days_post2nd <= 120)
-df_swimmer <- data_recoded[, c("Date", "Common_ID", "Disease_Recoded",
-                                "Disease_Recoded_granular", "Days_post2nd", "ELISA_Titer")]
+# "Date" is deliberately absent from the released data: collection dates are PHI and were
+# stripped during de-identification. It was selected here but never used, which broke the script
+# from a clean checkout. Selecting only the columns the panel actually needs.
+df_swimmer <- data_recoded[, c("Common_ID", "Disease_Recoded",
+                               "Disease_Recoded_granular", "Days_post2nd", "ELISA_Titer")]
 
 # Keep only individuals with serial samples
 row_count <- df_swimmer %>%
@@ -59,7 +62,8 @@ row_count_sub <- df_swimmer_sub %>%
   summarize(row_count = n(), .groups = "drop")
 counts <- row_count_sub %>%
   dplyr::count(Disease_Recoded_granular) %>%
-  dplyr::mutate(label = paste(Disease_Recoded_granular, "\n(n =", n, ")"))
+  # paste() inserts its default space separator, giving "MGUS \n(n = 14 )". paste0 does not.
+  dplyr::mutate(label = paste0(Disease_Recoded_granular, "\n(n=", n, ")"))
 labels <- setNames(counts$label, counts$Disease_Recoded_granular)
 
 # Swimmer plot
@@ -78,26 +82,25 @@ p1 <- ggplot(df_swimmer_sub, aes(x = Days_post2nd, y = Common_ID, group = Common
     legend.position = "bottom",
     legend.justification = "center",
     legend.direction = "horizontal",
-    legend.text = element_text(size = 8),
-    legend.title = element_text(size = 9, face = "bold"),
+    legend.text = element_text(size = 8, family = FONT),
+    legend.title = element_text(size = 9, face = "bold", family = FONT),
     legend.key.size = unit(0.4, "cm"),
     legend.margin = margin(0, 0, 0, 0),
     legend.box.margin = margin(-5, 0, 0, 0),
     panel.border = element_rect(fill = NA, color = "black"),
-    strip.text = element_text(size = 10, face = "bold"),
+    strip.text = element_text(size = 10, face = "bold", family = FONT),
     strip.background = element_blank(),
     panel.spacing = unit(0.3, "lines"),
     axis.text.y = element_blank(),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 9, color = "black"),
-    axis.title = element_text(size = 10, color = "black")
+    axis.text.x = element_text(size = 9, color = "black", family = FONT),
+    axis.title = element_text(size = 10, color = "black", family = FONT)
   ) +
   xlab("Days Post 2nd Dose") + ylab("") +
   guides(fill = "none", color = "none") +
-  scale_x_continuous(limits = c(0, NA)) +
+  scale_x_continuous(limits = c(0, NA), breaks = c(0, 14, 60, 120)) +
   scale_y_discrete(expand = expansion(mult = c(0.03))) +
   facet_wrap(~ Disease_Recoded_granular, scales = "free", ncol = 2,
              labeller = as_labeller(labels))
 
-ggsave(file.path(FIGURES_DIR, "Figure1D.png"), p1, dpi = 300, units = "in",
-       height = 4.5, width = 4)
+save_figure(p1, "Figure1D", width = 4, height = 4.5)

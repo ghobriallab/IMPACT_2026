@@ -1,8 +1,8 @@
 # ============================================================================
-# Purpose:      Figure 4E: IFN-gamma ELISPOT for SARS-CoV-2 spike (SARS) and CEF recall pools, in HD vs SMM, technical-duplicate-averaged and DMSO-normalized; age- and sex-adjusted rank-based ANCOVA.
+# Purpose:      Figure 4E: IFN-gamma ELISPOT for SARS-CoV-2 spike (SARS) and CERI recall pools, in HD vs SMM, technical-duplicate-averaged and DMSO-normalized; age- and sex-adjusted rank-based ANCOVA.
 # Inputs:       data/elisa/elispot_spike_cef.csv (de-identified ELISPOT well-level counts).
-# Outputs:      figures/Figure4E.png (and matching PDF).
-# Dependencies: R + dplyr, tidyr, rstatix, ggpubr; sources ../config.R.
+# Outputs:      figures/Figure4E.png (and matching PDF and SVG).
+# Dependencies: R + dplyr, tidyr, rstatix, ggpubr; sources ../config.R for FONT and save_figure().
 # ============================================================================
 source("../config.R")
 library(dplyr)
@@ -75,12 +75,12 @@ p <- ggplot(long_df, aes(x = Label, y = mean, fill = Disease)) +
   geom_boxplot(alpha = 0.5, outlier.size = -1, show.legend = FALSE) +
   geom_point(position = position_jitter(width = 0.2), shape = 21, size = 2.5, show.legend = FALSE) +
   scale_fill_manual(values = color_palette) +
-  theme(axis.text.x = element_text(angle = 0, hjust = 0.5, color = "black", size = 13),
-        axis.text.y = element_text(color = "black", size = 16),
-        axis.title = element_text(size = 18),
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5, color = "black", size = 13, family = FONT),
+        axis.text.y = element_text(color = "black", size = 16, family = FONT),
+        axis.title = element_text(size = 18, family = FONT),
         panel.background = element_blank(),
         panel.border = element_rect(fill = NA, color = "black"),
-        strip.text = element_text(size = 18, face = "plain"),
+        strip.text = element_text(size = 18, face = "plain", family = FONT),
         strip.background = element_blank()) +
   xlab("") +
   ylab(NULL) +
@@ -106,10 +106,9 @@ stat.test$p <- .adj_p[as.character(stat.test$category)]
 stat.test$p_label <- paste0("p = ", signif(stat.test$p, 2))
 
 final_plot <- p +
-  stat_pvalue_manual(stat.test, label = "{p_label}",
+  stat_pvalue_manual(family = FONT, stat.test, label = "{p_label}",
                      tip.length = 0.02, bracket.nudge.y = c(0.1),
                      size = 5.5, inherit.aes = FALSE, hide.ns = FALSE) +
   scale_y_continuous(expand = expansion(mult = c(0.05, 0.1)), n.breaks = 8)
 
-ggsave(file.path(FIGURES_DIR, "Figure4E.png"), plot = final_plot, dpi = 300, units = "in", height = 4.5, width = 5)
-ggsave(file.path(FIGURES_DIR, "Figure4E.pdf"), plot = final_plot, dpi = 300, units = "in", height = 4.5, width = 5)
+save_figure(final_plot, "Figure4E", width = 5, height = 4.5)

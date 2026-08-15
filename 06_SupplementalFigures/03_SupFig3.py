@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bone-marrow myeloid TNFSF13 (APRIL) analysis (Zavidij et al., 2020, GSE124310).
 
-Extends peripheral myeloid TNFSF13 (manuscript Fig 3C) into the bone marrow
+Extends peripheral myeloid TNFSF13 (manuscript Figure 3C) into the bone marrow
 niche using the Zavidij et al. (Nat Cancer 2020, GSE124310) BM CD138-depleted scRNA-seq
 across HD/MGUS/SMM/MM. Tests whether myeloid TNFSF13 transcript is preserved at the BM
 niche, the actual site of plasma cell survival.
@@ -23,7 +23,7 @@ Outputs:
   zavidij_bm_lineage_counts.csv
   zavidij_bm_TNFSF13_supfig.png
 
-Purpose:      Supplementary Figure 3: bone-marrow myeloid TNFSF13 (APRIL) expression in HD/MGUS/SMM/MM, using the Zavidij et al. (Nat Cancer 2020, GSE124310) BM CD138-depleted scRNA-seq. Extends peripheral Fig 3D into the niche site of plasma-cell survival.
+Purpose:      Supplementary Figure 3: bone-marrow myeloid TNFSF13 (APRIL) expression in HD/MGUS/SMM/MM, using the Zavidij et al. (Nat Cancer 2020, GSE124310) BM CD138-depleted scRNA-seq. Extends peripheral Figure 3C into the niche site of plasma-cell survival.
 
 Inputs:       32 GSE124310 sample matrices (loaded via scanpy; QC-filtered and lineage-scored from canonical markers).
 

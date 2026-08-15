@@ -3,7 +3,7 @@
 
 Purpose:      Figure 5C: IL-1B response gene signature score (BIOCARTA / Reactome-derived) in peripheral immune cells, paired pre vs post vaccination, in HD/MGUS/SMM. Scores re-normalized from the counts layer on a 2,678-HVG control pool; Wilcoxon signed-rank per group + BH correction.
 
-Inputs:       H5AD_IL1B (the de-identified comprehensive deposit; scoring excludes QC_removed, Platelets and CLL); data/hvg_2678_genes.txt control pool; data/il1b_response_genes_human.csv gene set.
+Inputs:       H5AD_IL1B (the de-identified comprehensive deposit; cells that failed quality control, the Platelets cluster and platelet-containing doublets are excluded); data/hvg_2678_genes.txt control pool; data/il1b_response_genes_human.csv gene set.
 
 Outputs:      figures/Figure5C.png + per-patient IL-1B response-score table.
 
@@ -20,16 +20,32 @@ import scanpy as sc
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import glob
+from matplotlib import font_manager
+
+# Every figure in this paper is set in Arial; fall back to the metrically identical Liberation Sans
+# and rewrite the SVG font-family afterwards. svg.fonttype="none" keeps text editable.
+FONT = "Arial"
+_av = {f.name for f in font_manager.fontManager.ttflist}
+if FONT not in _av:
+    for _p in glob.glob("/usr/share/fonts/**/LiberationSans-*.ttf", recursive=True):
+        font_manager.fontManager.addfont(_p)
+    _av = {f.name for f in font_manager.fontManager.ttflist}
+PLOT_FONT = FONT if FONT in _av else ("Liberation Sans" if "Liberation Sans" in _av else "sans-serif")
+plt.rcParams["font.family"] = PLOT_FONT
+plt.rcParams["svg.fonttype"] = "none"
 import seaborn as sns
 from scipy import stats
 import gc
 
-# Cell types to exclude. Note: the upstream "MK" cluster is platelet contamination
-# (alpha-granule signature: PPBP/PF4/TUBB1/NRGN, low UMI/n_genes, no CD34/MKI67/RUNX1) and
-# was relabeled "Platelets" in the deposit; doublet categories were renamed to db:*+Platelets
-# in step.
+# Cell scope. Excluded: cells that failed quality control (QC_removed), the "Platelets" cluster,
+# and any platelet-containing doublet (db:*+Platelets). The upstream "MK" cluster is platelet
+# contamination (alpha-granule signature PPBP/PF4/TUBB1/NRGN, low UMI/n_genes, no CD34/MKI67/
+# RUNX1); it was relabeled "Platelets" in the deposit and the Figure 3B legend states that it is
+# excluded from downstream analyses. Remaining doublet categories are retained.
 EXCLUDE_CELLTYPES = ['QC_removed', 'Platelets', 'CLL']
-EXCLUDE_PATTERNS = ['db:']
+EXCLUDE_PATTERNS = []                  # no blanket 'db:' exclusion
+EXCLUDE_SUBSTRINGS = ['Platelets']     # catches db:*+Platelets
 
 # Plot colors
 COLORS_PREPOST = {'Pre-Vx': '#4878A8', 'Post-Vx': '#E05555'}
@@ -56,7 +72,25 @@ def should_exclude_celltype(ct):
     for pattern in EXCLUDE_PATTERNS:
         if ct.startswith(pattern):
             return True
+    for sub in EXCLUDE_SUBSTRINGS:
+        if sub in ct:
+            return True
     return False
+
+
+def paired_effect_size(post, pre):
+    """|Z|/sqrt(n_pairs), the same statistic rstatix::wilcox_effsize reports for panels A, B, D-F.
+    Z is the tie-corrected standardized signed-rank statistic. Verified to 6 decimals against R."""
+    d = np.asarray(post) - np.asarray(pre)
+    d = d[d != 0]
+    n = len(d)
+    if n < 2:
+        return np.nan
+    rk = stats.rankdata(np.abs(d))
+    _, cnt = np.unique(rk, return_counts=True)
+    var = n * (n + 1) * (2 * n + 1) / 24 - (cnt ** 3 - cnt).sum() / 48
+    z = (rk[d > 0].sum() - n * (n + 1) / 4) / np.sqrt(var)
+    return abs(z) / np.sqrt(n)
 
 
 def compute_statistics(paired_df, disease_list):
@@ -76,80 +110,120 @@ def compute_statistics(paired_df, disease_list):
                 'Disease': disease, 'n': n,
                 'Mean_PreVx': pre_vals.mean(), 'Mean_PostVx': post_vals.mean(),
                 'Mean_Diff': post_vals.mean() - pre_vals.mean(),
-                'Wilcoxon_stat': stat, 'p_value': p_value
+                'Wilcoxon_stat': stat, 'p_value': p_value,
+                'effsize': paired_effect_size(post_vals, pre_vals)
             })
         else:
             stats_results.append({
                 'Disease': disease, 'n': n,
                 'Mean_PreVx': np.nan, 'Mean_PostVx': np.nan,
-                'Mean_Diff': np.nan, 'Wilcoxon_stat': np.nan, 'p_value': np.nan
+                'Mean_Diff': np.nan, 'Wilcoxon_stat': np.nan, 'p_value': np.nan,
+                'effsize': np.nan
             })
-    return pd.DataFrame(stats_results)
+    out = pd.DataFrame(stats_results)
+    # Benjamini-Hochberg across the disease groups tested in this panel.
+    pv = out['p_value'].to_numpy(dtype=float)
+    ok = ~np.isnan(pv)
+    qv = np.full(pv.shape, np.nan)
+    if ok.any():
+        sel = pv[ok]; m = sel.size; order = np.argsort(sel)
+        run = 1.0; tmp = np.empty(m)
+        for k in range(m - 1, -1, -1):
+            run = min(run, sel[order[k]] * m / (k + 1))
+            tmp[order[k]] = run
+        qv[ok] = tmp
+    out['q_value'] = qv
+    return out
 
 
-def generate_boxplot(plot_df, stats_df, output_path, disease_order=None):
-    """Generate boxplot with significance brackets."""
+def generate_boxplot(paired_df, stats_df, output_path, disease_order=None):
+    """Paired pre/post panel matching the layout of Figure 5A, 5B and 5D-F: one facet per disease
+    group, boxes for each timepoint, lines connecting each participant, and a single bracket
+    carrying the BH-corrected q-value (plus the effect size where the comparison is significant).
+    No star or ns glyphs: the value is printed so the reader can judge it."""
     if disease_order is None:
-        disease_order = ['HD', 'MGUS', 'SMM']
-    disease_order = [d for d in disease_order if d in plot_df['Disease'].unique()]
+        disease_order = ["HD", "MGUS", "SMM"]
+    label_map = {"Healthy": "HD", "HD": "HD", "MGUS": "MGUS", "SMM": "SMM"}
+    disease_order = [d for d in disease_order if d in paired_df["Disease"].unique()]
 
-        # boxes remain readable and content (legend, n's, p-values, significance markers) all fit.
-    fig, ax = plt.subplots(figsize=(4.5, 3.0))
+    # R 'steelblue' / 'tomato2' as used by scale_fill_manual() in Figure 5A/B and 5D-F.
+    PRE, POST = "#4682B4", "#EE5C42"
+    fig, axes = plt.subplots(1, len(disease_order), figsize=(6, 4), dpi=300, sharey=True)
+    if len(disease_order) == 1:
+        axes = [axes]
+    rng = np.random.default_rng(2026)
+    positions = [1, 2]
 
-    sns.boxplot(data=plot_df, x='Disease', y='IL1B_score', hue='Timepoint_Clean',
-                order=disease_order, hue_order=['Pre-Vx', 'Post-Vx'],
-                palette=COLORS_PREPOST, width=0.65, linewidth=1.5, ax=ax)
-    sns.stripplot(data=plot_df, x='Disease', y='IL1B_score', hue='Timepoint_Clean',
-                  order=disease_order, hue_order=['Pre-Vx', 'Post-Vx'],
-                  palette=COLORS_PREPOST, dodge=True, alpha=0.6, size=5, ax=ax, legend=False)
+    ymin = min(paired_df["Pre-Vx"].min(), paired_df["Post-Vx"].min())
+    ymax = max(paired_df["Pre-Vx"].max(), paired_df["Post-Vx"].max())
+    span = max(ymax - ymin, 1e-9)
 
-    y_min = plot_df['IL1B_score'].min()
-    y_max = plot_df['IL1B_score'].max()
-    y_range = y_max - y_min
-    bracket_y = y_max + 0.02 * y_range
+    for ax, disease in zip(axes, disease_order):
+        sub = paired_df[paired_df["Disease"] == disease]
+        pre, post = sub["Pre-Vx"].values, sub["Post-Vx"].values
+        n = len(sub)
 
-    for i, disease in enumerate(disease_order):
-        if disease not in stats_df['Disease'].values:
-            continue
-        row = stats_df[stats_df['Disease'] == disease].iloc[0]
-        p_val = row['p_value']
-        n = int(row['n'])
+        # Geometry matched to the R panels: geom_boxplot at its default width 0.75, grey20 lines,
+        # no caps, median fattened; geom_line size 0.3 alpha 0.5; geom_pointrange shape 21 size 0.5.
+        # The R jitter is runif(-0.15, 0.15) drawn independently for every ROW, so a participant's
+        # pre and post points sit at different x and the connector is slanted.
+        BOX_LINE = "#333333"
+        bp = ax.boxplot([pre, post], positions=positions, widths=0.75, showfliers=False,
+                        showcaps=False, patch_artist=True,
+                        medianprops=dict(color=BOX_LINE, linewidth=2.14),
+                        whiskerprops=dict(color=BOX_LINE, linewidth=1.07))
+        for patch, colour in zip(bp["boxes"], [PRE, POST]):
+            patch.set_facecolor(colour); patch.set_alpha(0.5)
+            patch.set_edgecolor(BOX_LINE); patch.set_linewidth(1.07); patch.set_zorder(1)
 
-        if pd.isna(p_val):
-            p_str, stars = "n/a", ""
-        elif p_val < 0.001:
-            p_str, stars = "p<0.001", "***"
-        elif p_val < 0.01:
-            p_str, stars = f"p={p_val:.3f}", "**"
-        elif p_val < 0.05:
-            p_str, stars = f"p={p_val:.2f}", "*"
-        else:
-            p_str, stars = f"p={p_val:.2f}", "ns"
+        jit_pre = rng.uniform(-0.15, 0.15, size=n)
+        jit_post = rng.uniform(-0.15, 0.15, size=n)
+        for i in range(n):
+            ax.plot([positions[0] + jit_pre[i], positions[1] + jit_post[i]], [pre[i], post[i]],
+                    color="black", linewidth=0.3, alpha=0.5, zorder=2)
+        ax.scatter(positions[0] + jit_pre, pre, s=26, facecolor=PRE, edgecolor="black",
+                   linewidth=0.5, zorder=3)
+        ax.scatter(positions[1] + jit_post, post, s=26, facecolor=POST, edgecolor="black",
+                   linewidth=0.5, zorder=3)
 
-        label = f"{stars}\n{p_str}"
-        x_left, x_right = i - 0.17, i + 0.17
-        bracket_height = 0.008 * y_range
-        ax.plot([x_left, x_left, x_right, x_right],
-                [bracket_y, bracket_y + bracket_height, bracket_y + bracket_height, bracket_y],
-                'k-', linewidth=1.2)
-        ax.text(i, bracket_y + bracket_height + 0.005 * y_range, label,
-                ha='center', va='bottom', fontsize=11)
-        ax.text(i, -0.12, f'n={n}', ha='center', va='top', fontsize=11,
-                transform=ax.get_xaxis_transform())
+        row = stats_df[stats_df["Disease"] == disease]
+        if len(row) and pd.notna(row["q_value"].iloc[0]):
+            q_val = float(row["q_value"].iloc[0])
+            eff = row["effsize"].iloc[0] if "effsize" in row else np.nan
+            p_str = f"q={q_val:.3f}" if q_val >= 0.001 else f"q={q_val:.1e}"
+            # effect size only where the comparison is significant, as in the Olink panels
+            if q_val < 0.1 and pd.notna(eff):
+                p_str += f", r={abs(eff):.2f}"
+            bar_y = ymax + 0.08 * span
+            ax.plot([positions[0], positions[0], positions[1], positions[1]],
+                    [bar_y - 0.02 * span, bar_y, bar_y, bar_y - 0.02 * span],
+                    color="black", linewidth=0.9)
+            ax.text(1.5, bar_y + 0.03 * span, p_str, ha="center", va="bottom", fontsize=13)
 
-    ax.set_xlabel('')
-    ax.set_ylabel('IL-1\u03b2 Response Score', fontsize=13)
-    ax.tick_params(axis='both', labelsize=12)
-    ax.tick_params(axis='x', labelsize=11)
-    ax.legend(title='', fontsize=11, frameon=False, loc='upper center',
-              bbox_to_anchor=(0.5, 1.18), ncol=2, columnspacing=1.5)
-    ax.set_ylim(y_min - 0.08 * y_range, bracket_y + 0.22 * y_range)
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
+        # Font sizes and the full panel border match theme_bw() in the R panels
+        # (axis.text 16, axis.title 18, strip.text 18, panel.border black).
+        ax.set_title(f"{label_map.get(disease, disease)}\n (n={n})", fontsize=18)
+        ax.set_xticks(positions)
+        ax.set_xticklabels(["Pre", "Post"], fontsize=16)
+        ax.tick_params(axis="y", labelsize=16)
+        ax.set_xlim(0.5, 2.5)
+        ax.set_ylim(ymin - 0.05 * span, ymax + 0.30 * span)
+        for side in ("top", "right", "bottom", "left"):
+            ax.spines[side].set_visible(True)
+            ax.spines[side].set_color("black")
 
+    axes[0].set_ylabel("IL-1\u03b2 response score\n(immune cells, scRNA-seq)", fontsize=18)
     plt.tight_layout()
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
-    plt.savefig(str(output_path).replace('.png', '.pdf'), bbox_inches='tight')
+    for ext in ("png", "pdf", "svg"):
+        out = str(output_path).replace(".png", f".{ext}")
+        plt.savefig(out, dpi=300, bbox_inches="tight")
+        if ext == "svg" and PLOT_FONT != FONT:
+            txt = Path(out).read_text(encoding="utf-8")
+            for q in ('"', "'"):
+                txt = txt.replace(f"font-family: {q}{PLOT_FONT}{q}", f"font-family: {FONT}")
+            txt = txt.replace(f"font-family: {PLOT_FONT}", f"font-family: {FONT}")
+            Path(out).write_text(txt, encoding="utf-8")
+        print(f"Saved: {out}")
     plt.close()
 
 
@@ -219,6 +293,19 @@ def main():
     })
     cell_df = cell_df[cell_df['Timepoint_Clean'].notna()].copy()
 
+    # Restrict to healthy immune cells (myeloid + lymphoid). EXCLUDE_CELLTYPES and
+    # should_exclude_celltype() were declared from the outset but never applied, so scores were
+    # previously averaged over every barcode in the object, including QC-failed cells, doublets,
+    # platelets (not immune) and CLL (excluded paper-wide). This applies the documented filter.
+    n_before = len(cell_df)
+    keep = ~cell_df['Annotation_Level_2'].map(should_exclude_celltype)
+    dropped = cell_df.loc[~keep, 'Annotation_Level_2'].value_counts()
+    cell_df = cell_df[keep].copy()
+    print(f"Cell-type filter: kept {len(cell_df):,} of {n_before:,} cells "
+          f"({100*len(cell_df)/n_before:.1f}%); excluded {n_before-len(cell_df):,}")
+    for ct, k in dropped.items():
+        print(f"    excluded {ct}: {k:,}")
+
     del adata
     gc.collect()
 
@@ -246,11 +333,11 @@ def main():
 
     for _, row in stats_df.iterrows():
         if pd.notna(row['p_value']):
-            print(f"  {row['Disease']} (n={int(row['n'])}): p={row['p_value']:.4f}")
+            print(f"  {row['Disease']} (n={int(row['n'])}): p={row['p_value']:.4f} "
+                  f"q={row['q_value']:.4f} r={row['effsize']:.3f}")
 
-    # Generate overall plot
-    plot_df = analysis_df[analysis_df['Timepoint_Clean'].isin(['Pre-Vx', 'Post-Vx'])].copy()
-    generate_boxplot(plot_df, stats_df, FIGURES_DIR / "Figure5C.png")
+    # Plot the PAIRED frame so the panel shows exactly the participants that are tested.
+    generate_boxplot(paired_df, stats_df, FIGURES_DIR / "Figure5C.png")
     print("Saved: Figure5C.png")
 
 

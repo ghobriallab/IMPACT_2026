@@ -45,9 +45,10 @@ Raw sequencing data are deposited at GEO under accession GSEXXXXXX.
 
 | Accession | Reference | Used in |
 |-----------|-----------|---------|
-| [GSE193531](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193531) | Boiarsky et al., *Nat Commun* 2022 | Figure 3F (= manuscript Figure 3E) |
+| [GSE193531](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193531) | Boiarsky et al., *Nat Commun* 2022 | Figure 3D |
+| [phs003855](https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id=phs003855) (dbGaP, controlled access) | Lightbody et al., *Nat Cancer* 2025 (SWIFT-seq) | Figure 3E |
 | [GSE124310](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE124310) | Zavidij et al., *Nat Cancer* 2020 | Supplementary Figure 3 |
-| [GSE205101 / GSE173644](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE173644) | Stephenson et al., *J Immunol* 2022 | Supplementary Figure 4 |
+| [GSE173644](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE173644) | Stephenson et al., *J Immunol* 2022 | Supplementary Figure 4 |
 
 Cell-level metadata for GSE193531 and the GSE173644 time-course matrix are included in the Zenodo deposit; GSE124310 sample matrices are downloaded directly by `06_SupplementalFigures/03_SupFig3.py`.
 
@@ -61,23 +62,29 @@ data/
 │   ├── elisa_serial_titers_all.csv
 │   ├── elisa_serial_titers_filtered.csv
 │   ├── elisa_mmr.csv
+│   ├── elisa_cohort_demographics.csv
 │   └── elispot_spike_cef.csv
 ├── olink/
 │   ├── olink_paired_prepost.csv
 │   ├── olink_cytokines.csv
 │   └── olink_summary_tumor_burden.csv
 ├── tcr/
-│   └── tcr_clonotype_proportions.rds
+│   ├── tcr_clonotype_proportions.rds
+│   └── tcr_shipping_status.csv
 ├── metadata/
 │   └── metadata_deidentified.csv
 ├── external/
 │   ├── GSE193531_cell-level-metadata.csv
+│   ├── GSE193531_umi-count-matrix.csv.gz
+│   ├── GSE173644_timecourse.txt.gz
 │   ├── PrePostTEC_olink_deid.csv
-│   └── PrePostTEC_cohort_deid.csv
+│   ├── PrePostTEC_cohort_deid.csv
+│   └── swiftseq_april_persample_deid.csv
+├── Figure2D_Olink_screen_PreVx.csv
+├── Figure2D_Olink_screen_PostVx.csv
 ├── il1b_response_genes_human.csv
 ├── hvg_2678_genes.txt
-├── smm_risk_strat.csv
-└── suppfig5_risk_genetics_titer.csv
+└── smm_risk_strat.csv
 ```
 
 ## Setup
@@ -118,7 +125,7 @@ SCRNA_DIR <- "/path/to/scrnaseq_data"
 
 All scripts output figures to the gitignored `figures/` directory at the repo root.
 
-Folders carry a numeric prefix matching their manuscript-figure order, and scripts inside each folder carry a numeric prefix matching their panel order. The original `FigureNX.R` / `FigureNX.py` panel name is preserved in the file name so the manuscript-to-script mapping stays explicit. A panel-letter caveat applies to Figure 3: the script names are historical, and the table below maps each script to the panel it produces in the final manuscript.
+Folders carry a numeric prefix matching their manuscript-figure order, and scripts inside each folder carry a numeric prefix matching their panel order. The original `FigureNX.R` / `FigureNX.py` panel name is preserved in the file name so the manuscript-to-script mapping stays explicit. Script names match the manuscript panel they produce.
 
 ### Main Figures
 
@@ -130,13 +137,14 @@ Folders carry a numeric prefix matching their manuscript-figure order, and scrip
 | 1E | `01_Figure1/04_Figure1E.R` | R | Linear mixed-effects waning slope (MGUS vs SMM-untreated) |
 | 1F | `01_Figure1/05_Figure1F.R` | R | Spike IgG titers after 3rd dose (SMM split into Untreated / Treated) |
 | 2B | `02_Figure2/01_Figure2B.R` | R | MMR antibody titers (HD vs SMM) |
-| 2D | `02_Figure2/02_Figure2D.R` | R | Plasma APRIL (TNFSF13) Olink levels, paired pre/post |
-| 2E | `02_Figure2/03_Figure2E.R` | R | Post-vaccination APRIL vs serum M-spike (Spearman, treatment-naive SMM) |
-| 2F | `02_Figure2/04_Figure2F.py` | Python | Paired pre/post-teclistamab plasma Olink for APRIL / BAFF / sBCMA (n=10 HRSMM on the teclistamab arm of Immuno-PRISM, NCT05469893); composite 3-protein decoy-sink readout |
-| 3B (UMAP) | `03_Figure3/01_Figure3C.py` | Python | Full UMAP with Annotation_Level_2 labels |
-| 3C (myeloid APRIL) | `03_Figure3/02_Figure3D.py` | Python | Myeloid TNFSF13 expression, pre vs post, age+sex adjusted |
-| 3D (B-cell APRIL module) | `03_Figure3/03_Figure3E.py` | Python | APRIL-responsive module score, treatment-naive HD/MGUS/SMM |
-| 3E (BM external validation) | `03_Figure3/04_Figure3F.py` | Python | Boiarsky GSE193531: APRIL module in normal vs malignant PCs across NBM/MGUS/SMM/NDMM |
+| 2D | `02_Figure2/02_Figure2D.R` | R | Panel-wide Olink screen, pre- vs post-vaccination q-values across all 52 proteins with APRIL as the top hit |
+| 2E | `02_Figure2/03_Figure2E.R` | R | Plasma APRIL (TNFSF13) Olink levels, paired pre/post |
+| 2F | `02_Figure2/04_Figure2F.R` | R | Post-vaccination APRIL vs serum M-spike (Spearman, treatment-naive SMM) |
+| 2G | `02_Figure2/05_Figure2G.py` | Python | Paired pre/post-teclistamab measurements in 10 HRSMM participants on the teclistamab arm of Immuno-PRISM (NCT05469893): serum M-spike plus plasma Olink for sBCMA, APRIL and BAFF |
+| 3B (UMAP) | `03_Figure3/01_Figure3B.py` | Python | Full UMAP with Annotation_Level_2 labels |
+| 3C (myeloid APRIL) | `03_Figure3/02_Figure3C.py` | Python | Myeloid TNFSF13 expression, pre vs post, age+sex adjusted |
+| 3D (BM external validation) | `03_Figure3/03_Figure3D.py` | Python | Boiarsky GSE193531: APRIL module in non-malignant bone marrow plasma cells across NBM/MGUS/SMM |
+| 3E (tumor vs normal PCs) | `03_Figure3/04_Figure3E.py` | Python | SWIFT-seq (Lightbody et al., dbGaP phs003855): APRIL module, tumor vs non-malignant plasma cells |
 | 4B | `04_Figure4/01_Figure4B.R` | R | Spike-specific TCR clonotypes (paired pre vs post) |
 | 4C | `04_Figure4/02_Figure4C.R` | R | CEF-specific TCR clonotypes (recall control) |
 | 4E | `04_Figure4/03_Figure4E.R` | R | IFN-gamma ELISPOT (HD vs SMM, age+sex adjusted) |
@@ -151,9 +159,8 @@ Folders carry a numeric prefix matching their manuscript-figure order, and scrip
 | S1 | `06_SupplementalFigures/01_SupFig1.py` | Python | Vaccine response by SMM 20/2/20 risk tier (LR / IR / HR), with per-tier treated/treatment-naive n annotated |
 | S2 | `06_SupplementalFigures/02_SupFig2.py` | Python | Per-lineage cell-type annotation UMAPs + canonical marker-gene heatmaps |
 | S3 | `06_SupplementalFigures/03_SupFig3.py` | Python | Bone-marrow myeloid TNFSF13 (APRIL) across HD/MGUS/SMM/MM (Zavidij GSE124310) |
-| S4 | `06_SupplementalFigures/04_SupFig4.py` | Python | External validation of the APRIL-responsive gene signature (GSE205101 / GSE173644) |
-| S5 | `06_SupplementalFigures/05_SupFig5.py` | Python | Individual APRIL-responsive gene violins (HD vs SMM, post-vaccination) |
-| S6 | `06_SupplementalFigures/06_SupFig6.R` | R | Sample shipping (FedEx vs not-shipped) does not confound SARS-CoV-2 spike-specific TCR clonotype frequencies (paired-design control for Figure 4B) |
+| S4 | `06_SupplementalFigures/04_SupFig4.py` | Python | External validation of the APRIL-responsive gene signature in APRIL-stimulated plasmablasts (GSE173644) |
+| S5 | `06_SupplementalFigures/05_SupFig5.R` | R | Sample shipping (shipped vs not shipped) does not confound SARS-CoV-2 spike-specific TCR clonotype frequencies (paired-design control for Figure 4B) |
 
 ### Execution order
 
@@ -161,7 +168,7 @@ Most scripts are independent. The only intra-folder dependency is:
 
 - **`03_Figure5DEF.R`** sources **`01_Figure5AB.R`** for its data prep and the `plot_cytokine()` helper.
 
-Scripts requiring the scRNA-seq h5ad file: Figure 3 (all four scripts), Figure 5C, and Supplementary Figures 2 and 5.
+Scripts requiring the scRNA-seq h5ad file: `03_Figure3/01_Figure3B.py`, `03_Figure3/02_Figure3C.py`, `05_Figure5/02_Figure5C.py` and `06_SupplementalFigures/02_SupFig2.py`. The remaining Figure 3 scripts run from the external tables shipped in the deposit.
 
 ## Reproducibility
 

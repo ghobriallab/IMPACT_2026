@@ -1,7 +1,7 @@
 # ============================================================================
 # Purpose:      Shared configuration for R figure scripts: data, repo and figure-output paths, color palette, and the age+sex-adjusted Jonckheere-Terpstra helper.
 # Inputs:       Environment variable expectations; the user edits SCRNA_DIR to the directory containing scRNAseq_IMPACT_Zenodo.h5ad.
-# Outputs:      DATA_DIR, FIGURES_DIR, COLORS, jt_test_residuals_age_sex() (sourced by every R figure script).
+# Outputs:      DATA_DIR, FIGURES_DIR, TABLES_DIR, COLORS, FONT, save_figure(), jt_test_residuals_age_sex() (sourced by every R figure script).
 # Dependencies: R base; tryCatch; rstudioapi (optional, command-line Rscript falls back to getwd()).
 # ============================================================================
 # IMPACT — Configuration
@@ -25,6 +25,62 @@ DATA_DIR <- file.path(REPO_DIR, "..", "data")
 # Output directory for figures
 FIGURES_DIR <- file.path(REPO_DIR, "..", "figures")
 dir.create(FIGURES_DIR, showWarnings = FALSE, recursive = TRUE)
+
+# REVISION: output directory for generated tables and figure source data
+TABLES_DIR <- file.path(REPO_DIR, "..", "tables")
+dir.create(TABLES_DIR, showWarnings = FALSE, recursive = TRUE)
+
+# ---------------------------------------------------------------------------
+# TYPOGRAPHY. Every figure in this paper is set in Arial. Arial is not
+# redistributable and is usually absent on Linux, so if it is missing we register
+# Liberation Sans under that name. The two are metrically identical (identical
+# glyph advance widths), so text occupies exactly the same space and nothing
+# reflows. Registering rather than relying on silent substitution matters for
+# vector output: the SVG then records the family we asked for.
+FONT <- "Arial"
+if (requireNamespace("systemfonts", quietly = TRUE)) {
+  if (!(FONT %in% systemfonts::system_fonts()$family)) {
+    .sub <- systemfonts::system_fonts()
+    .sub <- .sub[.sub$family == "Liberation Sans", ]
+    if (nrow(.sub) > 0) {
+      .pick <- function(st) {
+        hit <- .sub$path[.sub$style == st]
+        if (length(hit)) hit[1] else .sub$path[.sub$style == "Regular"][1]
+      }
+      systemfonts::register_font(FONT, plain = .pick("Regular"), bold = .pick("Bold"),
+                                 italic = .pick("Italic"), bolditalic = .pick("Bold Italic"))
+    }
+  }
+}
+
+# Write a ggplot to png, pdf and svg with Arial preserved.
+#   png via ragg and pdf via cairo, because the base devices cannot resolve a
+#   named font family and error out instead of substituting.
+#   svg via svglite, which keeps text as text (editable), unlike the cairo SVG
+#   device which converts glyphs to outlines. svglite records the RESOLVED family
+#   name, so the file is post-processed to say Arial.
+save_figure <- function(plot, basename, width, height, dpi = 300, svg = TRUE) {
+  ggplot2::ggsave(file.path(FIGURES_DIR, paste0(basename, ".png")), plot,
+                  width = width, height = height, units = "in", dpi = dpi,
+                  device = if (requireNamespace("ragg", quietly = TRUE)) ragg::agg_png else NULL)
+  ggplot2::ggsave(file.path(FIGURES_DIR, paste0(basename, ".pdf")), plot,
+                  width = width, height = height, units = "in", device = cairo_pdf)
+  if (svg) {
+    svg_path <- file.path(FIGURES_DIR, paste0(basename, ".svg"))
+    if (requireNamespace("svglite", quietly = TRUE)) {
+      ggplot2::ggsave(svg_path, plot, width = width, height = height, units = "in")
+      txt <- readLines(svg_path, warn = FALSE)
+      for (q in c('"', "'")) {
+        txt <- gsub(paste0("font-family: ", q, "Liberation Sans", q),
+                    paste0("font-family: ", FONT), txt, fixed = TRUE)
+      }
+      writeLines(txt, svg_path)
+    } else {
+      warning("svglite not installed; SVG would have text as outlines, skipping")
+    }
+  }
+  invisible(plot)
+}
 
 # age- and sex-adjusted Jonckheere-Terpstra
 # ordered-trend test on residuals of rank(outcome) ~ Age + Sex.

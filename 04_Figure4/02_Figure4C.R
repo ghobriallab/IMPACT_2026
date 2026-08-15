@@ -1,8 +1,8 @@
 # ============================================================================
 # Purpose:      Figure 4C: CEF (CMV/EBV/Flu) recall TCR clonotype proportions, paired pre vs post vaccination, in HD/MGUS/SMM. Same statistical framework as Figure 4B; CEF serves as an immune-naive recall control.
 # Inputs:       data/tcr/tcr_clonotype_proportions.rds.
-# Outputs:      figures/Figure4C.png (and matching PDF).
-# Dependencies: R + dplyr, tidyr, ggplot2, ggpubr, plotrix, rstatix; sources ../config.R.
+# Outputs:      figures/Figure4C.png (and matching PDF and SVG).
+# Dependencies: R + dplyr, tidyr, ggplot2, ggpubr, plotrix, rstatix; sources ../config.R for FONT and save_figure().
 # ============================================================================
 source("../config.R")
 library(dplyr)
@@ -70,9 +70,9 @@ p_cef <- ggplot(plot_paired_df, aes(x = VaccineTimepoint, y = CEF_mean_prop, fil
   theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
         panel.background = element_blank(), axis.line = element_line(colour = "black"),
         panel.border = element_rect(fill = NA, color = "black"),
-        axis.text = element_text(size = 14, color = "black"),
-        axis.title.y = element_text(size = 13, color = "black"),
-        strip.text = element_text(size = 15, face = "plain"),
+        axis.text = element_text(size = 14, color = "black", family = FONT),
+        axis.title.y = element_text(size = 13, color = "black", family = FONT),
+        strip.text = element_text(size = 15, face = "plain", family = FONT),
         strip.background = element_rect(fill = NA)) +
   scale_y_continuous(expand = expansion(mult = c(0.05, 0.15))) +
   scale_x_discrete(breaks = c(1, 2), labels = c("Pre-Vx", "Post-Vx")) +
@@ -91,9 +91,8 @@ stat_cef$p <- signif(stat_cef$p, 2)
 stat_cef$p_label <- paste0("p = ", stat_cef$p)
 
 p_cef_final <- p_cef +
-  stat_pvalue_manual(stat_cef, label = "p_label", tip.length = 0.02, bracket.nudge.y = 0.01,
+  stat_pvalue_manual(family = FONT, stat_cef, label = "p_label", tip.length = 0.02, bracket.nudge.y = 0.01,
                      inherit.aes = FALSE) +
   scale_y_continuous(expand = expansion(mult = c(0.05, 0.1)))
 
-ggsave(file.path(FIGURES_DIR, "Figure4C.png"), plot = p_cef_final, dpi = 300, units = "in", width = 6, height = 3.15)
-ggsave(file.path(FIGURES_DIR, "Figure4C.pdf"), plot = p_cef_final, dpi = 300, units = "in", width = 6, height = 3.15)
+save_figure(p_cef_final, "Figure4C", width = 6, height = 3.15)

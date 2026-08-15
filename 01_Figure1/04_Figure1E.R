@@ -1,5 +1,5 @@
 # ============================================================================
-# Purpose:      Figure 1E: linear mixed-effects model of antibody-titer waning slope (MGUS vs SMM-untreated), with age and sex as fixed covariates, and the per-individual slope as a random effect.
+# Purpose:      Figure 1E: linear mixed-effects model of antibody-titer waning slope (MGUS vs SMM-untreated), with age and sex as fixed covariates, and a per-individual random intercept.
 # Inputs:       data/elisa/elisa_serial_titers_filtered.csv.
 # Outputs:      figures/Figure1E.png and the LME fit / LRT statistic for the slope difference.
 # Dependencies: R + lme4, lmerTest, dplyr, tidyr, ggplot2; sources ../config.R.
@@ -152,13 +152,14 @@ p <- ggplot() +
       "SMM" = paste0("SMM (n=", samples_by_disease$n_patients[samples_by_disease$Disease == "SMM"], ")")
     )
   ) +
-  annotate("text", x = 5, y = annot_y_base + 0.40,
+  annotate("text", family = FONT, x = 5, y = annot_y_base + 0.40,
            label = annot_mgus, hjust = 0, size = 2.5, color = "steelblue", fontface = "bold") +
-  annotate("text", x = 5, y = annot_y_base + 0.18,
+  annotate("text", family = FONT, x = 5, y = annot_y_base + 0.18,
            label = annot_smm, hjust = 0, size = 2.5, color = "tomato", fontface = "bold") +
-  annotate("text", x = 5, y = annot_y_base - 0.04,
+  annotate("text", family = FONT, x = 5, y = annot_y_base - 0.04,
            label = annot_lrt, hjust = 0, size = 2.5, color = "black", fontface = "bold") +
   xlab("Days post 2nd dose") +
+  scale_x_continuous(breaks = c(0, 14, 60, 120)) +
   ylab("log(ELISA Titer)") +
   theme_bw(base_size = 9) +
   theme(
@@ -168,16 +169,16 @@ p <- ggplot() +
     legend.title = element_blank(),
     legend.position = c(0.02, 0.38),
     legend.justification = c(0, 0),
-    legend.text = element_text(size = 7),
+    legend.text = element_text(size = 7, family = FONT),
     legend.key.size = unit(0.35, "cm"),
     legend.key.width = unit(0.5, "cm"),
     legend.margin = margin(0, 0, 0, 0),
     legend.background = element_blank(),
     legend.key = element_blank(),
-    axis.title = element_text(size = 8),
-    axis.text = element_text(size = 7, color = "black"),
+    axis.title = element_text(size = 8, family = FONT),
+    axis.text = element_text(size = 7, color = "black", family = FONT),
     panel.border = element_rect(color = "black", linewidth = 0.5),
     plot.margin = margin(5, 5, 5, 5)
   )
 
-ggsave(file.path(FIGURES_DIR, "Figure1E.png"), p, width = 3.0, height = 2.8, dpi = 300)
+save_figure(p, "Figure1E", width = 3.0, height = 2.8)

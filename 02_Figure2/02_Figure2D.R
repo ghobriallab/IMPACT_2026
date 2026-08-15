@@ -1,27 +1,31 @@
 # ============================================================================
-# Purpose:      Figure 2D: plasma APRIL (TNFSF13) protein levels by Olink, paired pre/post vaccination across HD, MGUS and SMM. The single MGUS patient with prior systemic therapy is dropped to keep the comparison treatment-naive.
-# Inputs:       data/olink/olink_paired_prepost.csv.
-# Outputs:      figures/Figure2D.png (and matching PDF).
-# Dependencies: R + tidyverse, rstatix, ggpubr; sources ../config.R.
+# Purpose:      Figure 2D: panel-wide Olink screen. Every protein on the panel is tested for a
+#               disease-vs-HD difference at both timepoints, and the resulting q-values are plotted
+#               against each other, so the reader can see that APRIL (TNFSF13) is not a pre-selected
+#               candidate but the top hit of an unbiased screen. Contrasts shown are HD vs SMM and
+#               HD vs MGUS. Comparisons are age- and sex-adjusted rank-based ANCOVA, Benjamini-
+#               Hochberg corrected across all 156 tests within a timepoint (52 proteins x 3 pairwise
+#               contrasts), the same family used throughout the Olink analysis.
+# Inputs:       data/olink/olink_paired_prepost.csv, data/elisa/elisa_cohort_demographics.csv.
+# Outputs:      figures/Figure2D.png, .pdf and .svg; source data
+#               tables/Figure2D_Olink_screen_PreVx.csv and tables/Figure2D_Olink_screen_PostVx.csv.
+# Dependencies: R + tidyverse, rstatix, ggrepel; sources ../config.R for FONT and save_figure().
 # ============================================================================
 source("../config.R")
 library(tidyverse)
 library(rstatix)
-library(ggpubr)
+library(ggrepel)
 
-# Read Olink protein data
+# ---------------------------------------------------------------- data, as in the other Fig 2 panels
 olink <- read.csv(file.path(DATA_DIR, "olink", "olink_paired_prepost.csv"), check.names = FALSE)
 olink$Diagnosis <- olink$Diagnosis_when_fully_vaccinated
 olink_meta <- olink[!duplicated(olink$Patient_ID), ]
 
-# Remove NA and IgM-MGUS
 olink <- olink[!is.na(olink$Level), ]
 olink <- olink[olink$Diagnosis != "IgM-MGUS", ]
 
-# drop the single MGUS participant with
-# prior systemic therapy from the Olink cohort. The remaining 20/20 SMM and 13/13 MGUS in this
-# analysis are treatment-naive (verified by joining the original-ID Olink summary to the ELISA
-# master Ever_treated column; mapping kept in scratch, not shared). HD are not applicable.
+# The single MGUS participant with prior systemic therapy is dropped so the comparison stays
+# treatment-naive, matching the other Olink panels.
 .OLINK_TREATED_DROP <- c("P49")
 olink <- olink[!olink$Patient_ID %in% .OLINK_TREATED_DROP, ]
 
@@ -39,11 +43,10 @@ olink_2$QC_1_pass_0_warning <- olink_3$QC_1_pass_0_warning[match(olink_2$P_C_T, 
 olink_2$P_C_T <- NULL
 olink_2$Diagnosis <- olink_meta$Diagnosis[match(olink_2$Patient_ID, olink_meta$Patient_ID)]
 
-# QC filter: keep only samples that pass QC and have no breakthrough infection
 data <- olink_2 %>% filter(QC_1_pass_0_warning == "1")
 data <- data[data$Diagnosis != "IgM-MGUS", ]
 
-# Identify cytokines with sufficient data across all groups
+# Proteins with more than one measurement in every group, which yields the 52-analyte panel
 check_data <- as.data.frame(table(data$Cytokine, data$Diagnosis, data$Timepoint))
 colnames(check_data) <- c("Cytokine", "Diagnosis", "Timepoint", "Freq")
 check_data_wide <- reshape(check_data, idvar = c("Cytokine", "Timepoint"),
@@ -52,149 +55,149 @@ cytokines_with_enough_data <- check_data_wide %>%
   group_by(Timepoint) %>%
   filter(Freq.Healthy > 1 & Freq.MGUS > 1 & Freq.SMM > 1) %>%
   pull(Cytokine)
-cytokines_with_enough_data <- unique(cytokines_with_enough_data)
+cytokines_with_enough_data <- unique(as.character(cytokines_with_enough_data))
 
 data$Timepoint <- ifelse(data$Timepoint == "After_Vax", "Post-Vx", "Pre-Vx")
-data$Timepoint <- factor(data$Timepoint, levels = c("Pre-Vx", "Post-Vx"))
+data <- data %>% filter(Cytokine %in% cytokines_with_enough_data)
 
-# BH-corrected Wilcoxon tests across all cytokines (HD vs others)
-# Pre-Vx
-stat.test_prevax_w_MGUS <- data %>%
-  filter(Timepoint == "Pre-Vx") %>%
-  filter(Cytokine %in% cytokines_with_enough_data) %>%
-  group_by(Timepoint, Cytokine) %>%
-  rstatix::wilcox_test(Level ~ Diagnosis) %>%
-  adjust_pvalue(method = "BH") %>%
-  add_significance()
-stat.test_prevax_w_MGUS <- stat.test_prevax_w_MGUS %>% filter(!group1 %in% c("MGUS"))
-stat.test_prevax_w_MGUS <- stat.test_prevax_w_MGUS %>%
-  add_xy_position(x = "Diagnosis", step.increase = c(0.1))
-stat.test_prevax_w_MGUS$p.adj <- paste0("q=", signif(stat.test_prevax_w_MGUS$p.adj, 2))
+# ---------------------------------------------------------------- covariates
+# Age and sex are taken from the de-identified ELISA cohort table, NOT from the Olink file. The Age
+# column shipped with the Olink data carries a single fill value for every healthy donor, which
+# would make age a proxy for group membership and absorb the disease effect. The assertion below
+# fails loudly if a constant-age source is ever reintroduced.
+demo <- read.csv(file.path(DATA_DIR, "elisa", "elisa_cohort_demographics.csv")) %>%
+  filter(!is.na(Age_at_second_dose), !is.na(Sex)) %>%
+  distinct(Deidentified_Patient_ID, .keep_all = TRUE) %>%
+  transmute(Patient_ID = as.character(Deidentified_Patient_ID),
+            Age = Age_at_second_dose, Sex = Sex)
+data <- data %>% left_join(demo, by = "Patient_ID")
+stopifnot(!any(is.na(data$Age)), !any(is.na(data$Sex)))
+stopifnot(dplyr::n_distinct(data$Age[data$Diagnosis == "Healthy"]) > 1)
 
-# Post-Vx
-stat.test_postvax_w_MGUS <- data %>%
-  filter(Timepoint == "Post-Vx") %>%
-  filter(Cytokine %in% cytokines_with_enough_data) %>%
-  group_by(Timepoint, Cytokine) %>%
-  rstatix::wilcox_test(Level ~ Diagnosis) %>%
-  adjust_pvalue(method = "BH") %>%
-  add_significance()
-stat.test_postvax_w_MGUS <- stat.test_postvax_w_MGUS %>% filter(!group1 %in% c("MGUS"))
-stat.test_postvax_w_MGUS <- stat.test_postvax_w_MGUS %>%
-  add_xy_position(x = "Diagnosis", step.increase = c(0.1))
-stat.test_postvax_w_MGUS$p.adj <- paste0("q=", signif(stat.test_postvax_w_MGUS$p.adj, 2))
+# ---------------------------------------------------------------- the screen
+# Age- and sex-adjusted rank-based ANCOVA, the covariate-adjusted analogue of the Wilcoxon rank-sum
+# test: the rank-transformed outcome is regressed on disease group, age and sex, and the group
+# coefficient is tested. The unadjusted Wilcoxon q is carried alongside in the source data so either
+# can be checked.
+PAIRS <- list(c("Healthy", "MGUS"), c("Healthy", "SMM"), c("MGUS", "SMM"))
 
-new_stat.test <- rbind(stat.test_prevax_w_MGUS, stat.test_postvax_w_MGUS)
-
-# Plot TNFSF13 (APRIL) ---
-all_cyto <- unique(as.character(new_stat.test$Cytokine))
-i <- which(all_cyto == "TNFSF13")
-tmp <- data %>% filter(Cytokine == all_cyto[i])
-
-color_palette <- c("steelblue", "orange", "tomato2", "chartreuse4", "deeppink")
-
-# Per-group counts for axis labels
-count_data <- tmp %>%
-  group_by(Timepoint, Diagnosis) %>%
-  summarise(Count = n(), .groups = "drop") %>%
-  mutate(Label = paste0(Diagnosis, "\n(n=", Count, ")"))
-tmp <- tmp %>% left_join(count_data, by = c("Timepoint", "Diagnosis"))
-
-tmp$Diagnosis <- factor(tmp$Diagnosis, levels = c("Healthy", "MGUS", "SMM"))
-# the prior fix attempted to work around a
-# left_join + facet_wrap ordering bug by reversing the factor levels; the workaround did
-# not survive subsequent dplyr/ggplot updates and Post-Vx kept rendering on the left.
-# Robust fix: drop dplyr left_join (which strips factor attributes), use base-R merge with
-# explicit factor reapplication after, then declare Timepoint as a factor with levels
-# c("Pre-Vx", "Post-Vx") so Pre-Vx is the first level and renders left under facet_wrap.
-tmp <- as.data.frame(tmp)
-tmp$Timepoint <- factor(as.character(tmp$Timepoint), levels = c("Pre-Vx", "Post-Vx"))
-
-p <- ggplot(tmp, aes(x = Label, y = Level, fill = Diagnosis)) +
-  geom_violin(alpha = 0.5, position = position_dodge(width = .75), size = 1,
-              show.legend = FALSE, color = NA, outlier.shape = NA) +
-  geom_boxplot(lwd = 1, alpha = 0.5, outlier.shape = NA, show.legend = FALSE) +
-  geom_point(position = position_jitter(width = 0.2), shape = 21,
-             outlier.shape = NA, outlier.size = 1, show.legend = FALSE) +
-  scale_fill_manual(values = color_palette) +
-  facet_wrap(~ Timepoint, scales = "free") +
-  theme(
-    axis.text.x = element_text(angle = 0, hjust = 0.5, color = "black", size = 12),
-    axis.text.y = element_text(color = "black", size = 12),
-    axis.title = element_text(size = 14),
-    panel.background = element_blank(),
-    panel.border = element_rect(fill = NA, color = "black"),
-    strip.text = element_text(size = 14, face = "plain"),
-    strip.background = element_blank(),
-    plot.title = element_text(size = 12, hjust = 0.5)
-  ) +
-  xlab("") +
-  ylab("TNFSF13 (APRIL) Level (NPX)")
-
-# q-values for TNFSF13 from the BH-corrected full analysis
-stat.test_cytokine_1 <- new_stat.test %>%
-  filter(Cytokine == "TNFSF13") %>%
-  filter(group1 == "Healthy")
-
-# Bracket positions
-stat.test_cytokine_1$xmin <- ifelse(stat.test_cytokine_1$group2 == "MGUS", 1, 1)
-stat.test_cytokine_1$xmax <- ifelse(stat.test_cytokine_1$group2 == "MGUS", 2, 3)
-max_level <- max(tmp$Level, na.rm = TRUE)
-stat.test_cytokine_1$y.position <- ifelse(stat.test_cytokine_1$group2 == "MGUS",
-                                          max_level * 1.05, max_level * 1.20)
-
-# Format q-value labels
-stat.test_cytokine_1$q_label <- ifelse(
-  as.numeric(gsub("q=", "", stat.test_cytokine_1$p.adj)) < 0.01,
-  paste0("q=", formatC(as.numeric(gsub("q=", "", stat.test_cytokine_1$p.adj)), format = "e", digits = 1)),
-  stat.test_cytokine_1$p.adj
-)
-
-# age- and sex-adjusted Jonckheere-Terpstra ordered-trend
-# test HD < MGUS < SMM for APRIL, computed independently in EACH facet (Pre-Vx and Post-Vx)
-# so the reader can see whether the disease-stage gradient is already present at baseline.
-.olink_demo <- read.csv(file.path(DATA_DIR, "olink", "olink_paired_prepost.csv"),
-                        check.names = FALSE) %>%
-  distinct(Patient_ID, Age, Sex)
-
-jt_for_tp <- function(tp_lbl) {
-  s <- tmp %>%
-    filter(Timepoint == tp_lbl) %>%
-    distinct(Patient_ID, Diagnosis, Level) %>%
-    left_join(.olink_demo, by = "Patient_ID") %>%
-    mutate(DiseaseStage = ifelse(Diagnosis == "Healthy", "HD", as.character(Diagnosis)))
-  jt <- jt_test_residuals_age_sex(s, "Level", "DiseaseStage",
-                                  order = c("HD", "MGUS", "SMM"))
-  # JT bracket sits ABOVE both q-value brackets (max q-bracket is at max_level*1.20).
-  data.frame(
-    Timepoint = tp_lbl,
-    x = 1, xend = 3, y = max_level * 1.28, yend = max_level * 1.28,
-    label = paste0("Jonckheere-Terpstra:\n", sub("^Jonckheere-Terpstra: ", "", jt_label(jt)))
-  )
+screen_one <- function(tp, cyto, pr) {
+  s <- data %>% filter(Timepoint == tp, Cytokine == cyto, Diagnosis %in% pr)
+  if (dplyr::n_distinct(s$Diagnosis) < 2) return(NULL)
+  s$rk <- rank(s$Level)
+  cf <- coef(summary(lm(rk ~ Diagnosis + Age + factor(Sex), data = s)))
+  # Same call the Figure 2E panel makes, so the unadjusted column reproduces the published
+  # q-values exactly. rstatix uses the exact test at these sample sizes; forcing the normal
+  # approximation here would silently disagree with the rest of the paper.
+  wt <- rstatix::wilcox_test(s, Level ~ Diagnosis)
+  m  <- tapply(s$Level, s$Diagnosis, median)
+  tibble(Timepoint = tp, Protein = cyto, Contrast = paste(pr, collapse = " vs "),
+         n_group1 = sum(s$Diagnosis == pr[1]), n_group2 = sum(s$Diagnosis == pr[2]),
+         median_group1 = unname(m[pr[1]]), median_group2 = unname(m[pr[2]]),
+         direction = ifelse(m[pr[2]] < m[pr[1]], paste("lower in", pr[2]),
+                            paste("higher in", pr[2])),
+         p_adjusted = cf[2, 4], p_unadjusted = wt$p[1])
 }
-.jt_df <- rbind(jt_for_tp("Pre-Vx"), jt_for_tp("Post-Vx"))
-.jt_df$Timepoint <- factor(.jt_df$Timepoint, levels = c("Pre-Vx", "Post-Vx"))
 
-bxp_padj <- p +
-  stat_pvalue_manual(stat.test_cytokine_1, label = "{q_label}",
-                     tip.length = 0.02, size = 4.2,
-                     inherit.aes = FALSE, hide.ns = FALSE) +
-  geom_segment(data = .jt_df,
-               aes(x = x, xend = xend, y = y, yend = yend),
-               linewidth = 0.6, inherit.aes = FALSE) +
-  geom_segment(data = .jt_df,
-               aes(x = x, xend = x, y = y - max_level * 0.025, yend = y),
-               linewidth = 0.6, inherit.aes = FALSE) +
-  geom_segment(data = .jt_df,
-               aes(x = xend, xend = xend, y = y - max_level * 0.025, yend = y),
-               linewidth = 0.6, inherit.aes = FALSE) +
-  geom_text(data = .jt_df,
-            aes(x = (x + xend) / 2, y = y + max_level * 0.08, label = label),
-            size = 3.9, fontface = "italic", lineheight = 0.95,
-            inherit.aes = FALSE) +
-  coord_cartesian(ylim = c(NA, max_level * 1.50), clip = "off") +
-  scale_y_continuous(expand = expansion(mult = c(0.05, 0.02))) +
-  theme(panel.spacing.x = unit(1.0, "lines"), plot.margin = margin(8, 8, 4, 4))
+res <- map_dfr(c("Pre-Vx", "Post-Vx"), function(tp)
+  map_dfr(cytokines_with_enough_data, function(cy)
+    map_dfr(PAIRS, function(pr) screen_one(tp, cy, pr)))) %>%
+  group_by(Timepoint) %>%
+  mutate(q_adjusted   = p.adjust(p_adjusted,   method = "BH"),
+         q_unadjusted = p.adjust(p_unadjusted, method = "BH")) %>%
+  ungroup()
 
-ggsave(file.path(FIGURES_DIR, "Figure2D.png"), bxp_padj, dpi = 300, units = "in", width = 6, height = 4)
-ggsave(file.path(FIGURES_DIR, "Figure2D.pdf"), bxp_padj, dpi = 300, units = "in", width = 6, height = 4)
+stopifnot(length(cytokines_with_enough_data) == 52)
+stopifnot(all(table(res$Timepoint) == 156))
+message(sprintf("panel-wide screen: %d proteins x %d contrasts = %d tests per timepoint",
+                length(cytokines_with_enough_data), length(PAIRS), 156))
+
+# source data, one file per timepoint, ranked by the adjusted q
+for (tp in c("Pre-Vx", "Post-Vx")) {
+  out <- res %>% filter(Timepoint == tp) %>% arrange(q_adjusted, p_adjusted) %>%
+    mutate(rank = row_number(),
+           across(c(median_group1, median_group2), ~ round(.x, 3)),
+           across(c(p_adjusted, q_adjusted, p_unadjusted, q_unadjusted), ~ signif(.x, 4))) %>%
+    select(rank, Protein, Contrast, n_group1, n_group2, median_group1, median_group2,
+           direction, p_adjusted, q_adjusted, p_unadjusted, q_unadjusted)
+  dir.create(TABLES_DIR, showWarnings = FALSE, recursive = TRUE)
+  write.csv(out, file.path(TABLES_DIR, sprintf("Figure2D_Olink_screen_%s.csv",
+                                               sub("-", "", tp))), row.names = FALSE)
+}
+
+# ---------------------------------------------------------------- panel
+Q_THRESH <- 0.1
+LAB <- c("Healthy vs SMM" = "SMM vs HD", "Healthy vs MGUS" = "MGUS vs HD")
+
+plot_df <- res %>%
+  filter(Contrast %in% names(LAB)) %>%
+  select(Protein, Contrast, Timepoint, q_adjusted) %>%
+  pivot_wider(names_from = Timepoint, values_from = q_adjusted) %>%
+  mutate(x = -log10(`Pre-Vx`), y = -log10(`Post-Vx`),
+         Comparison = factor(LAB[Contrast], levels = c("SMM vs HD", "MGUS vs HD")),
+         sig_both = `Pre-Vx` < Q_THRESH & `Post-Vx` < Q_THRESH)
+
+# Only APRIL is labelled; every other protein is identifiable from the source-data CSVs.
+lab_df <- plot_df %>% filter(Protein == "TNFSF13", Comparison == "SMM vs HD")
+# REVISION: the two axes span very different ranges (the strongest pre-Vx hit is far weaker than
+# the strongest post-Vx hit), so a single square limit left roughly 40% of the panel empty. Each
+# axis now gets its own data-driven limit, which fills the wider canvas.
+xlim_hi <- max(plot_df$x) * 1.13
+ylim_hi <- max(plot_df$y) * 1.10
+
+p <- ggplot(plot_df, aes(x, y, fill = Comparison)) +
+  geom_hline(yintercept = -log10(Q_THRESH), linetype = "dashed",
+             colour = "grey40", linewidth = 0.4) +
+  geom_vline(xintercept = -log10(Q_THRESH), linetype = "dashed",
+             colour = "grey40", linewidth = 0.4) +
+  geom_point(shape = 21, size = 3.3, colour = "black", stroke = 0.4, alpha = 0.85) +
+  geom_text_repel(data = lab_df, aes(label = "TNFSF13 (APRIL)"),
+                  size = 4.6, fontface = "italic", colour = "black", family = FONT,
+                  min.segment.length = 0, box.padding = 0.9, seed = 2026,
+                  segment.colour = "grey30", segment.size = 0.3, show.legend = FALSE) +
+  annotate("text", x = xlim_hi * 0.98, y = -log10(Q_THRESH), label = "q = 0.1",
+           hjust = 1, vjust = -0.5, size = 3.8, colour = "grey35", family = FONT) +
+  # MGUS takes the same mustard/orange used for MGUS in the APRIL panel (03_Figure2E.R);
+  # SMM keeps the project red.
+  scale_fill_manual(values = c("SMM vs HD" = unname(COLORS["SMM"]),
+                               "MGUS vs HD" = "orange")) +
+  coord_cartesian(xlim = c(0, xlim_hi), ylim = c(0, ylim_hi)) +
+  labs(title = "Olink screen, 52 proteins",
+       subtitle = paste("Age- and sex-adjusted ANCOVA vs HD\n",
+                        "BH-corrected across 156 tests per timepoint", sep = ""),
+       # Plain Unicode rather than plotmath: the plotmath unary minus collides with the "l" of log
+       # in the default device font.
+       x = "Pre-Vx  \u2212log\u2081\u2080(q)",
+       y = "Post-Vx  \u2212log\u2081\u2080(q)", fill = NULL) +
+  theme_bw(base_family = FONT) +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(colour = "grey93", linewidth = 0.3),
+        panel.border = element_rect(fill = NA, colour = "black"),
+        text = element_text(family = FONT),
+        axis.text = element_text(size = 13, colour = "black", family = FONT),
+        axis.title = element_text(size = 15, family = FONT),
+        # bottom-right is the empty corner: the null cloud sits bottom-left and the only
+        # significant point sits top-right
+        legend.position = c(0.985, 0.015), legend.justification = c(1, 0),
+        legend.background = element_rect(fill = alpha("white", 0.8), colour = NA),
+        legend.key.size = unit(0.85, "lines"),
+        legend.key.height = unit(1.05, "lines"),
+        legend.text = element_text(size = 13, family = FONT),
+        plot.title = element_text(size = 15, family = FONT, hjust = 0,
+                                  margin = margin(b = 1)),
+        plot.subtitle = element_text(size = 11, family = FONT, colour = "grey25",
+                                     hjust = 0, lineheight = 1.1,
+                                     margin = margin(t = 0, b = 4)),
+        plot.margin = margin(5, 7, 3, 3))
+
+save_figure(p, "Figure2D", width = 7.0, height = 3.85)
+
+# console summary
+cat("\nproteins clearing q<", Q_THRESH, " at BOTH timepoints:\n", sep = "")
+print(as.data.frame(plot_df %>% filter(sig_both) %>%
+  select(Protein, Comparison, `Pre-Vx`, `Post-Vx`) %>% arrange(`Post-Vx`)))
+cat("\nany-timepoint hits per comparison:\n")
+print(plot_df %>% group_by(Comparison) %>%
+  summarise(n_proteins = n(),
+            sig_pre = sum(`Pre-Vx` < Q_THRESH), sig_post = sum(`Post-Vx` < Q_THRESH),
+            sig_both = sum(sig_both), .groups = "drop"))

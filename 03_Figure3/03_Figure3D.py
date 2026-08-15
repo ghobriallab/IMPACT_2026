@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Figure 3F (= manuscript Figure 3E): APRIL-responsive gene module score in NON-MALIGNANT
+"""Figure 3D (manuscript Figure 3D): APRIL-responsive gene module score in NON-MALIGNANT
 plasma cells from published bone-marrow scRNA-seq (Boiarsky et al. 2022, GSE193531), across
 NBM -> MGUS -> SMM.
 
@@ -16,11 +16,11 @@ within-stage normal-vs-malignant contrasts (both ns).
 Statistic of record (shown on the figure): Jonckheere-Terpstra ordered trend across
 NBM -> MGUS -> SMM, plus BH-corrected cross-stage contrasts vs NBM.
 
-Purpose:      Figure 3F (= manuscript Figure 3E): published-cohort validation of the APRIL-responsive gene module in non-malignant bone marrow plasma cells across NBM/MGUS/SMM, with a Jonckheere-Terpstra ordered-trend test.
+Purpose:      Figure 3D (manuscript Figure 3D): published-cohort validation of the APRIL-responsive gene module in non-malignant bone marrow plasma cells across NBM/MGUS/SMM, with a Jonckheere-Terpstra ordered-trend test.
 
 Inputs:       GSE193531 count matrix + companion cell-level metadata (CNV-based malignant calls, used here only to EXCLUDE malignant cells).
 
-Outputs:      figures/Figure3F.png (and SVG).
+Outputs:      figures/Figure3D.png (and PDF + SVG).
 
 Dependencies: Python + scanpy, numpy, pandas, scipy, matplotlib; reads config.py.
 """
@@ -39,8 +39,36 @@ from scipy.sparse import csr_matrix
 from statsmodels.stats.multitest import multipletests
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+# Every figure in this paper is set in Arial. Register the metrically identical Liberation Sans
+# as a fallback and rewrite the SVG font-family afterwards; svg.fonttype="none" keeps text editable.
+import glob as _glob
+from matplotlib import font_manager as _fm
+FONT = "Arial"
+_av = {f.name for f in _fm.fontManager.ttflist}
+if FONT not in _av:
+    for _p in _glob.glob("/usr/share/fonts/**/LiberationSans-*.ttf", recursive=True):
+        _fm.fontManager.addfont(_p)
+    _av = {f.name for f in _fm.fontManager.ttflist}
+PLOT_FONT = FONT if FONT in _av else ("Liberation Sans" if "Liberation Sans" in _av else "sans-serif")
+plt.rcParams["font.family"] = PLOT_FONT
+plt.rcParams["svg.fonttype"] = "none"
+
+
+def save_figure(basename, dpi=300):
+    """Write PNG + PDF + SVG; rewrite the SVG font-family to Arial (see note above)."""
+    for ext in ("png", "pdf", "svg"):
+        out = FIGURES_DIR / f"{basename}.{ext}"
+        plt.savefig(out, dpi=dpi, bbox_inches="tight", facecolor="white")
+        if ext == "svg" and PLOT_FONT != FONT:
+            t = Path(out).read_text(encoding="utf-8")
+            for q in ('"', "'"):
+                t = t.replace(f"font-family: {q}{PLOT_FONT}{q}", f"font-family: {FONT}")
+            t = t.replace(f"font-family: {PLOT_FONT}", f"font-family: {FONT}")
+            Path(out).write_text(t, encoding="utf-8")
+        print(f"Saved: {out.name}")
+
 import matplotlib.patches as mpatches
-# Make mathtext bold ($\mathbf{...}$) render in DejaVu Sans so it matches the surrounding text
+# No mathtext is used in this panel (see the JT label below); keep a sans fallback anyway.
 mpl.rcParams['mathtext.fontset'] = 'dejavusans'
 
 np.random.seed(42)
@@ -95,7 +123,9 @@ agg = agg[agg['n_cells'] >= MIN_CELLS_PER_SAMPLE].copy()
 # along NBM -> SMM; red shades = malignant neoplastic PCs going light-to-dark along MGUS -> SMM).
 # Same disease palette as manuscript Figure 3D (config COLORS): NBM takes the HD colour,
 # since it is the healthy-marrow comparator, so the two panels read as one disease axis.
-NORMAL_SHADES     = ['#4DBBD5', '#F39B7F', '#E64B35']   # NBM(=HD), MGUS, SMM
+# REVISION: palette matched to Figure 3C (diag_colors) so HD/NBM, MGUS and SMM read as one
+# disease axis across the two panels.
+NORMAL_SHADES     = ['#3498db', '#f1c40f', '#e74c3c']   # NBM(=HD), MGUS, SMM
 # REVISION: malignant ('neoplastic') plasma cells removed at co-author request. The panel now
 # shows only non-malignant plasma cells, which is the population the APRIL-niche argument is
 # about; including malignant cells opened a separate discussion the paper does not need.
@@ -211,12 +241,16 @@ for (lbl, ia, ib), y in zip(norm_cross, norm_lvl):
                  color=NORMAL_BRACKET_COLOR, lw=1.0, fontsize=11)
 
 center_x = 2    # midpoint of the 3-box layout. Two-line JT label centered here.
-# JT normal PC line: prefix in normal weight + stat (z, p) in BOLD on a second line (mathtext).
-ax.text(center_x, jt_norm_y,
-        "Jonckheere-Terpstra ordered trend (NBM → SMM)\n"
-        + r"$\mathbf{" + f"z={z_n:.2f},\\ p={p_n:.3g}" + r"}$",
-        ha='center', va='center', fontsize=11.5, fontweight='normal',
-        multialignment='center')
+# JT normal PC line: prefix in normal weight, stat (z, p) bold on a second line.
+# REVISION: the bold stat was previously mathtext ($\mathbf{...}$). matplotlib renders mathtext as
+# glyph OUTLINES in a separate math font, so that one label came out in DejaVu Sans and was not
+# editable text in the SVG. Drawn as two plain Arial text objects instead.
+ax.text(center_x, jt_norm_y + 0.055 * yr,
+        "Jonckheere-Terpstra ordered trend (NBM → SMM)",
+        ha='center', va='center', fontsize=11.5, fontweight='normal')
+ax.text(center_x, jt_norm_y - 0.055 * yr,
+        f"z = {z_n:.2f},  p = {p_n:.3g}",
+        ha='center', va='center', fontsize=11.5, fontweight='bold')
 
 ax.set_title('Non-malignant BM plasma cells (Boiarsky GSE193531)',
              fontsize=12, pad=8, fontweight='bold')
@@ -225,7 +259,6 @@ ax.set_title('Non-malignant BM plasma cells (Boiarsky GSE193531)',
 ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
 
 plt.tight_layout()
-plt.savefig(FIGURES_DIR / "Figure3F.png", dpi=300, bbox_inches='tight', facecolor='white')
-plt.savefig(FIGURES_DIR / "Figure3F.svg", bbox_inches='tight', facecolor='white')
+save_figure("Figure3D")
 plt.close()
-print("Saved: Figure3F.png + Figure3F.svg")
+

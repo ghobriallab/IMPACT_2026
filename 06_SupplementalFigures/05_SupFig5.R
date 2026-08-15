@@ -1,5 +1,5 @@
 # ============================================================================
-# Purpose:      Supplementary Figure 6: sample shipping (FedEx vs not-shipped)
+# Purpose:      Supplementary Figure 5: sample shipping (shipped vs not-shipped)
 #               does not confound SARS-CoV-2 spike-specific TCR clonotype
 #               frequencies in treatment-naive SMM, in either pre- or
 #               post-vaccination samples. Paired-design control panel for
@@ -8,7 +8,7 @@
 #               per-patient clonotype proportions, bootstrap iterations)
 #               data/tcr/tcr_shipping_status.csv (de-identified shipping flag
 #               per patient x timepoint, SMM-untreated only)
-# Outputs:      figures/SupFig6.png (and matching PDF)
+# Outputs:      figures/SupFig5.png (and matching PDF + SVG)
 # Dependencies: R + dplyr, tidyr, readr, ggplot2, ggpubr, rstatix, plotrix;
 #               sources ../config.R
 # ============================================================================
@@ -51,6 +51,12 @@ plot_paired_df <- average_prop_covid %>%
   ) %>%
   select(PatientID, DiseaseStatus, VaccineTimepoint, COVID_mean_prop, COVID_SD_prop)
 
+# Express clonotype proportions as percentages so this panel is on the same scale
+# as Figure 4B, whose y-axis is also a percentage (01_Figure4B.R applies the same
+# x100 conversion). Statistics are unaffected by the constant scale factor.
+plot_paired_df <- plot_paired_df %>%
+  mutate(across(c(COVID_mean_prop, COVID_SD_prop), ~ . * 100))
+
 # Join with shipping-status table ---------------------------------------
 shipping_df <- shipping_df %>%
   mutate(VaccineTimepoint = as.integer(VaccineTimepoint),
@@ -92,30 +98,26 @@ p_ship <- smm_ship_paired %>%
                   shape = 21, show.legend = FALSE) +
   scale_fill_manual(values = c("steelblue", "tomato2")) +
   scale_x_discrete(labels = c(
-    "1" = paste0("FedEx Shipped\n(n=", n_shipped, ")"),
+    "1" = paste0("Shipped\n(n=", n_shipped, ")"),
     "2" = paste0("Not Shipped\n(n=", n_not_shipped, ")")
   )) +
   facet_grid(~ VaccineTimepoint, scales = "free",
              labeller = labeller(VaccineTimepoint = timepoint_labels)) +
   stat_pvalue_manual(stat_ship, label = "p = {p}", hide.ns = FALSE) +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 0, hjust = 0.5, color = "black", size = 11),
-        axis.text.y = element_text(color = "black", size = 12),
-        axis.title = element_text(size = 14),
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5, color = "black", size = 11, family = FONT),
+        axis.text.y = element_text(color = "black", size = 12, family = FONT),
+        axis.title = element_text(size = 14, family = FONT),
         panel.background = element_blank(),
         panel.border = element_rect(fill = NA, color = "black"),
         strip.background = element_blank(),
-        strip.text = element_text(color = "black", face = "plain", size = 14),
-        plot.title = element_text(size = 14, hjust = 0.5),
+        strip.text = element_text(color = "black", face = "plain", size = 14, family = FONT),
+        plot.title = element_text(size = 14, hjust = 0.5, family = FONT),
         plot.margin = margin(t = 5, r = 10, b = 5, l = 10, unit = "pt")) +
   xlab("") +
   ylab("SARS-CoV-2 spike-specific clonotypes (%)") +
   ggtitle("SMM (treatment-naive): shipped vs not-shipped")
 
 # Save ------------------------------------------------------------------
-ggsave(file.path(FIGURES_DIR, "SupFig6.png"), plot = p_ship,
-       width = 7, height = 4.5, dpi = 300)
-ggsave(file.path(FIGURES_DIR, "SupFig6.pdf"), plot = p_ship,
-       width = 7, height = 4.5, dpi = 300)
-cat("Saved: SupFig6.png + SupFig6.pdf\n")
+save_figure(p_ship, "SupFig5", width = 7, height = 4.5)
 print(stat_ship)

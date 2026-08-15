@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Figure 3C (script name) = manuscript Figure 3B: full UMAP with Annotation_Level_2 labels.
+"""Figure 3B (manuscript Figure 3B): full UMAP with Annotation_Level_2 labels.
 
-Purpose:      Figure 3C: full UMAP of the integrated scRNA-seq object (~1.1M clean cells) colored by Annotation_Level_2 cell-type labels.
+Purpose:      Figure 3B: full UMAP of the integrated scRNA-seq object (~1.1M clean cells) colored by Annotation_Level_2 cell-type labels.
 
 Inputs:       H5AD_ANNOTATED (the de-identified comprehensive deposit, scRNAseq_IMPACT_Zenodo.h5ad).
 
-Outputs:      figures/Figure3C.png.
+Outputs:      figures/Figure3B.png (and PDF + SVG).
 
 Dependencies: Python + scanpy, matplotlib, numpy, pandas; reads config.py.
 """
@@ -21,7 +21,33 @@ import pandas as pd
 from matplotlib import colormaps
 from matplotlib.patheffects import withStroke
 
-plt.rcParams['font.family'] = 'sans-serif'
+# Every figure in this paper is set in Arial. Register the metrically identical Liberation Sans
+# as a fallback and rewrite the SVG font-family afterwards; svg.fonttype="none" keeps text editable.
+import glob as _glob
+from matplotlib import font_manager as _fm
+FONT = "Arial"
+_av = {f.name for f in _fm.fontManager.ttflist}
+if FONT not in _av:
+    for _p in _glob.glob("/usr/share/fonts/**/LiberationSans-*.ttf", recursive=True):
+        _fm.fontManager.addfont(_p)
+    _av = {f.name for f in _fm.fontManager.ttflist}
+PLOT_FONT = FONT if FONT in _av else ("Liberation Sans" if "Liberation Sans" in _av else "sans-serif")
+plt.rcParams["font.family"] = PLOT_FONT
+plt.rcParams["svg.fonttype"] = "none"
+
+
+def save_figure(basename, dpi=300):
+    """Write PNG + PDF + SVG; rewrite the SVG font-family to Arial (see note above)."""
+    for ext in ("png", "pdf", "svg"):
+        out = FIGURES_DIR / f"{basename}.{ext}"
+        plt.savefig(out, dpi=dpi, bbox_inches="tight", facecolor="white")
+        if ext == "svg" and PLOT_FONT != FONT:
+            t = Path(out).read_text(encoding="utf-8")
+            for q in ('"', "'"):
+                t = t.replace(f"font-family: {q}{PLOT_FONT}{q}", f"font-family: {FONT}")
+            t = t.replace(f"font-family: {PLOT_FONT}", f"font-family: {FONT}")
+            Path(out).write_text(t, encoding="utf-8")
+        print(f"Saved: {out.name}")
 plt.rcParams['font.size'] = 14
 
 # Load data
@@ -104,6 +130,6 @@ ax.tick_params(labelsize=16)
 ax.set_aspect('auto')
 
 plt.tight_layout()
-plt.savefig(FIGURES_DIR / "Figure3C.png", dpi=300, bbox_inches='tight', facecolor='white')
+save_figure("Figure3B")
 plt.close()
-print("Saved: Figure3C.png")
+

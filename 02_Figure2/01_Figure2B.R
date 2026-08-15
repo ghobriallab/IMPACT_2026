@@ -1,8 +1,8 @@
 # ============================================================================
 # Purpose:      Figure 2B: MMR (Measles, Mumps, Rubella) antibody titers in HD vs SMM, adjusted for age (Age_Range midpoint) and sex via rank-based ANCOVA.
 # Inputs:       data/elisa/elisa_mmr.csv (de-identified MMR ELISA).
-# Outputs:      figures/Figure2B.png.
-# Dependencies: R + tidyverse, rstatix, ggpubr; sources ../config.R.
+# Outputs:      figures/Figure2B.png (and matching PDF and SVG).
+# Dependencies: R + tidyverse, rstatix, ggpubr; sources ../config.R for FONT and save_figure().
 # ============================================================================
 source("../config.R")
 library(tidyverse)
@@ -79,21 +79,22 @@ p <- ggplot(MMR_df_long, aes(x = DiseaseStatus, y = Titer_Measurement, fill = Di
              show.legend = FALSE) +
   scale_fill_manual(values = color_palette) +
   theme(
-    axis.text.x = element_text(angle = 0, hjust = 0.5, color = "black", size = 12),
-    axis.text.y = element_text(color = "black", size = 12),
-    axis.title = element_text(size = 14),
+    text = element_text(family = FONT),
+    axis.text.x = element_text(angle = 0, hjust = 0.5, color = "black", size = 12, family = FONT),
+    axis.text.y = element_text(color = "black", size = 12, family = FONT),
+    axis.title = element_text(size = 14, family = FONT),
     panel.background = element_blank(),
     panel.border = element_rect(fill = NA, color = "black"),
-    strip.text = element_text(size = 14, face = "plain"),
+    strip.text = element_text(size = 14, face = "plain", family = FONT),
     strip.background = element_blank()
   ) +
   xlab("") +
   ylab("Antibody Titer (IU/ml)") +
   scale_y_log10(expand = expansion(mult = c(0.05, 0.15))) +
-  stat_pvalue_manual(stat.test, label = "{p.adj}",
+  stat_pvalue_manual(stat.test, label = "{p.adj}", family = FONT,
                      tip.length = 0.02, bracket.nudge.y = c(0.2),
                      inherit.aes = FALSE, hide.ns = FALSE) +
   facet_wrap(~Infection, scales = "free") +
   scale_x_discrete(labels = function(x) paste0(x, "\n(n=", counts_numeric[x], ")"))
 
-ggsave(file.path(FIGURES_DIR, "Figure2B.png"), p, dpi = 300, unit = "in", width = 7, height = 3)
+save_figure(p, "Figure2B", width = 7, height = 3)

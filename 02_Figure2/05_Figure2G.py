@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # ============================================================================
-# Purpose:      Figure 2F: paired pre/post-teclistamab measurements in 10 SMM
+# Purpose:      Figure 2G: paired pre/post-teclistamab measurements in 10 SMM
 #               patients enrolled on the teclistamab arm of Immuno-PRISM
 #               (NCT05469893, DFCI 22-154). Four sub-panels ordered L->R by
 #               the mechanistic causal chain:
@@ -17,7 +17,7 @@
 #               after Bucket 1 of the Romanos-feedback overhaul).
 # Inputs:       data/external/PrePostTEC_olink_deid.csv (deid: P01..P10).
 #               data/external/PrePostTEC_cohort_deid.csv (baseline + post M-spike).
-# Outputs:      Figure2F_PrePostTEC_4panels.{png,pdf,svg} in figures/.
+# Outputs:      Figure2G_PrePostTEC_4panels.{png,pdf,svg} in figures/.
 # Dependencies: Python + pandas, scipy, matplotlib. Sources ../config.py.
 # ============================================================================
 import sys
@@ -25,9 +25,25 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 from scipy import stats
+import glob
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib import font_manager
+
+# Every figure in this paper is set in Arial. Arial is not redistributable and is usually absent on
+# Linux, so fall back to Liberation Sans, which is metrically identical (same glyph advance widths).
+# svg.fonttype="none" keeps text as TEXT rather than converting glyphs to outlines, so the panel
+# stays editable in the figure-assembly software; the saved SVG is then rewritten to say Arial.
+FONT = "Arial"
+_avail = {f.name for f in font_manager.fontManager.ttflist}
+if FONT not in _avail:
+    for _p in glob.glob("/usr/share/fonts/**/LiberationSans-*.ttf", recursive=True):
+        font_manager.fontManager.addfont(_p)
+    _avail = {f.name for f in font_manager.fontManager.ttflist}
+PLOT_FONT = FONT if FONT in _avail else ("Liberation Sans" if "Liberation Sans" in _avail else "sans-serif")
+plt.rcParams["font.family"] = PLOT_FONT
+plt.rcParams["svg.fonttype"] = "none"
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
@@ -185,7 +201,7 @@ for i, s in enumerate(SUBPANELS):
     stats_data[s]["q"] = float(q_array[i])
 
 # ---- Four sub-panels (L->R by mechanistic causal chain) ----
-fig, axes = plt.subplots(1, 4, figsize=(11.5, 3.6), dpi=200)
+fig, axes = plt.subplots(1, 4, figsize=(12.5, 3.9), dpi=200)
 positions = [1, 2]
 np.random.seed(42)
 
@@ -227,29 +243,20 @@ for ax, key in zip(axes, SUBPANELS):
     ax.plot([positions[1], positions[1]], [bar_y - 0.025*y_span, bar_y], color="black", linewidth=0.9)
     q_val = s["q"]
     q_str = f"q = {q_val:.3f}" if q_val >= 0.001 else f"q = {q_val:.1e}"
-    # M-spike shows IMWG response categories (fold-change is undefined because
-    # 5+ patients hit IFX-/IFX+ censoring); proteins use fold-change from the
-    # median delta-NPX (log2-scale Olink). For collapses (fc < 1) we display
-    # the reciprocal so the magnitude of change reads correctly; direction is
-    # conveyed by the boxplot itself.
-    if s["is_protein"]:
-        fc = s["median_fc_linear"]
-        fc_mag = fc if fc >= 1 else (1.0 / fc)
-        effect_str = f"fc = {fc_mag:.1f}x"
-    else:
-        effect_str = f"{s['n_cr']} CR / {s['n_vgpr']} VGPR / {s['n_pr']} PR"
-    ax.text((positions[0] + positions[1]) / 2, bar_y + 0.05 * y_span,
-            f"{q_str}\n{effect_str}",
-            ha="center", va="bottom", fontsize=8)
+    # Only the q-value is annotated. The IMWG response categories were removed from the M-spike
+    # panel and the fold-change from the protein panels; magnitude and direction are already
+    # carried by the boxplots and the connector slopes.
+    ax.text((positions[0] + positions[1]) / 2, bar_y + 0.05 * y_span, q_str,
+            ha="center", va="bottom", fontsize=12)
 
     # Cosmetics
-    ax.set_title(GENE_LABELS[key], fontsize=10, loc="left", fontweight="bold")
+    ax.set_title(GENE_LABELS[key], fontsize=14, loc="left", fontweight="bold", pad=4)
     ax.set_xticks(positions)
-    ax.set_xticklabels(["Pre-TEC", "Post-TEC"], fontsize=9)
-    ax.set_ylabel(s["ylabel"], fontsize=9)
+    ax.set_xticklabels(["Pre-TEC", "Post-TEC"], fontsize=13)
+    ax.set_ylabel(s["ylabel"], fontsize=13)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    ax.tick_params(axis="both", labelsize=8)
+    ax.tick_params(axis="both", labelsize=12)
     ax.set_ylim(ymin - 0.10*y_span, ymax + 0.40*y_span)
 
     if s["is_protein"]:
@@ -265,12 +272,21 @@ for ax, key in zip(axes, SUBPANELS):
               f"BH q = {s['q']:.3g}")
 
 fig.suptitle("Pre vs post teclistamab paired measurements (Immuno-PRISM, high-risk SMM)",
-             fontsize=11, y=1.02)
-plt.tight_layout()
+             fontsize=14, y=0.965)
+plt.tight_layout(rect=[0, 0, 1, 0.95])
 
 for ext in ("png", "pdf", "svg"):
-    out = FIGURES_DIR / f"Figure2F_PrePostTEC_4panels.{ext}"
+    out = FIGURES_DIR / f"Figure2G_PrePostTEC_4panels.{ext}"
     plt.savefig(out, dpi=200, bbox_inches="tight")
+    if ext == "svg" and PLOT_FONT != FONT:
+        # matplotlib records the family it actually resolved. Rewrite it to Arial: Liberation Sans
+        # is metrically identical, so every glyph position already written stays correct, and the
+        # panel then opens in real Arial in the figure-assembly software.
+        txt = out.read_text(encoding="utf-8")
+        for q in ('"', "'"):
+            txt = txt.replace(f"font-family: {q}{PLOT_FONT}{q}", f"font-family: {FONT}")
+        txt = txt.replace(f"font-family: {PLOT_FONT}", f"font-family: {FONT}")
+        out.write_text(txt, encoding="utf-8")
     print(f"Saved: {out}")
 plt.close()
 
@@ -290,7 +306,7 @@ for k in SUBPANELS:
         numbers[k]["median_fc_linear"] = float(s["median_fc_linear"])
     else:
         numbers[k]["median_pct_reduction"] = float(s["median_pct_red"])
-numbers_out = FIGURES_DIR / "Figure2F_4panels_numbers.json"
+numbers_out = FIGURES_DIR / "Figure2G_4panels_numbers.json"
 with numbers_out.open("w") as f:
     json.dump(numbers, f, indent=2)
 print(f"Numbers written to: {numbers_out}")

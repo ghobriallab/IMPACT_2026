@@ -1,8 +1,9 @@
 # ============================================================================
 # Purpose:      Figure 5A-B: plasma IL-1B and IL-18 Olink levels, paired pre vs post vaccination, in HD/MGUS/SMM. The single MGUS patient with prior systemic therapy is dropped to keep the cohort treatment-naive. Defines the plot_cytokine() helper reused by Figure5DEF.R.
+#               REVISION: q-values are Benjamini-Hochberg corrected across the WHOLE panel (52 analytes x 3 disease groups = 156 tests), as stated in the Methods, rather than across the 3 disease groups of a single analyte. Effect sizes r are unaffected by the correction.
 # Inputs:       data/olink/olink_cytokines.csv.
 # Outputs:      figures/Figure5A.png and figures/Figure5B.png (and matching PDFs); side-effect: plot_cytokine() is left in the global environment for Figure5DEF.R.
-# Dependencies: R + tidyverse, rstatix, ggpubr; sources ../config.R.
+# Dependencies: R + tidyverse, rstatix, ggpubr; sources ../config.R for FONT and save_figure().
 # ============================================================================
 source("../config.R")
 library(tidyverse)
@@ -28,7 +29,8 @@ plot_df_index$Timepoint <- ifelse(plot_df_index$Timepoint == "Pre-Vx", "1", "2")
 plot_df_index$Timepoint <- factor(plot_df_index$Timepoint, levels = c("1", "2"), ordered = TRUE)
 plot_df_index$dummy_timepoint <- as.numeric(plot_df_index$Timepoint)
 
-# Add jitter for paired lines
+# Add jitter for paired lines (seeded so the panels are byte-reproducible)
+set.seed(2026)
 b <- as.list(runif(nrow(plot_df_index), -0.15, 0.15))
 b_df <- do.call("rbind", b)
 colnames(b_df) <- "add_noise"
@@ -45,8 +47,37 @@ counts <- as.data.frame(table(master_paired$Timepoint, master_paired$Diagnosis, 
 counts <- counts %>% distinct(Var2, Var3, .keep_all = TRUE)
 counts$matchname <- paste0(counts$Var2, "_", counts$Var3)
 master_paired$matchname <- paste0(master_paired$Diagnosis, "_", master_paired$Cytokine)
-counts$n_ind <- paste0(counts$Var2, "\n (n=", counts$Freq, ")")
+# Display label: "Healthy" is shown as HD throughout the figure.
+counts$n_ind <- paste0(ifelse(counts$Var2 == "Healthy", "HD", as.character(counts$Var2)),
+                       "\n (n=", counts$Freq, ")")
 master_paired$n_ind <- counts$n_ind[match(master_paired$matchname, counts$matchname)]
+
+# REVISION: panel-wide multiple-testing family.
+# The Methods state that paired pre- versus post-vaccination comparisons are BH-corrected
+# "across all cytokines tested", so the correction is computed ONCE over the whole panel
+# rather than within each analyte. The family is every analyte with at least 3 paired
+# participants in all three disease groups, which resolves to the same 52 analytes carried
+# into the Figure 2D cross-sectional screen, giving 52 x 3 = 156 tests. Restricting to
+# analytes with enough paired data is required because a signed-rank test on fewer than 3
+# pairs is uninformative and would only inflate the family.
+.panel_analytes <- master_paired %>%
+  group_by(Cytokine, Diagnosis) %>%
+  summarise(n_pt = n_distinct(Patient_ID), .groups = "drop") %>%
+  group_by(Cytokine) %>%
+  filter(n() == 3, all(n_pt >= 3)) %>%
+  pull(Cytokine) %>%
+  unique()
+
+PANEL_Q <- master_paired %>%
+  filter(Cytokine %in% .panel_analytes) %>%
+  group_by(Cytokine, Diagnosis) %>%
+  wilcox_test(Level ~ Timepoint, paired = TRUE) %>%
+  ungroup() %>%
+  mutate(p.adj = p.adjust(p, method = "BH")) %>%
+  select(Cytokine, Diagnosis, p.adj)
+stopifnot(length(.panel_analytes) == 52, nrow(PANEL_Q) == 156)
+message(sprintf("panel-wide BH family: %d analytes x 3 groups = %d tests",
+                length(.panel_analytes), nrow(PANEL_Q)))
 
 # Display names for y-axis labels
 cyto_labels <- c("IL1B" = "IL-1\u03B2", "IL18" = "IL-18",
@@ -71,21 +102,27 @@ plot_cytokine <- function(cyto_name, paired_data) {
           panel.background = element_blank(),
           axis.line = element_line(colour = "black"),
           panel.border = element_rect(fill = NA, color = "black"),
-          axis.text = element_text(size = 16, color = "black"),
-          axis.title = element_text(size = 18, color = "black"),
-          strip.text = element_text(size = 18, face = "plain"),
+          axis.text = element_text(size = 16, color = "black", family = FONT),
+          axis.title = element_text(size = 18, color = "black", family = FONT),
+          strip.text = element_text(size = 18, face = "plain", family = FONT),
           strip.background = element_blank()) +
     scale_y_continuous(expand = expansion(mult = c(0.05, 0.15))) +
     scale_x_discrete(breaks = c(1, 2), labels = c("Pre", "Post")) +
     facet_wrap(. ~ n_ind) +
     ylab(paste0(y_label, " (NPX)")) + xlab("")
 
-  # Paired Wilcoxon test per disease group, BH-corrected
+  # Paired Wilcoxon signed-rank test per disease group. The q-value is NOT corrected
+  # here: it is looked up from PANEL_Q, the panel-wide BH family of 156 tests.
   stat.test <- plot_paired_df %>%
     group_by(n_ind) %>%
     wilcox_test(Level ~ VaccineTimepoint, paired = TRUE) %>%
-    adjust_pvalue(method = "BH") %>%
     add_significance()
+
+  stat.test <- stat.test %>%
+    left_join(plot_paired_df %>% ungroup() %>% distinct(n_ind, Diagnosis), by = "n_ind") %>%
+    left_join(PANEL_Q %>% filter(Cytokine == cyto_name) %>% select(Diagnosis, p.adj),
+              by = "Diagnosis")
+  stopifnot(!any(is.na(stat.test$p.adj)))
 
   # Paired rank-biserial effect sizes per disease group
   eff <- plot_paired_df %>%
@@ -106,7 +143,7 @@ plot_cytokine <- function(cyto_name, paired_data) {
   # only the per-disease paired Wilcoxon q (with effect size r when q<0.1). Bracket label
   # text color forced to black (was gray under ggpubr default).
   final <- p +
-    stat_pvalue_manual(stat.test, label = "bracket_label",
+    stat_pvalue_manual(stat.test, label = "bracket_label", family = FONT,
                        tip.length = 0.02, bracket.nudge.y = 1, size = 3.6,
                        color = "black", inherit.aes = FALSE) +
     coord_cartesian(clip = "off") +
@@ -119,10 +156,8 @@ plot_cytokine <- function(cyto_name, paired_data) {
 
 # Figure 5A: IL-1B
 p_il1b <- plot_cytokine("IL1B", master_paired)
-ggsave(file.path(FIGURES_DIR, "Figure5A.png"), plot = p_il1b, dpi = 300, units = "in", width = 6, height = 4)
-ggsave(file.path(FIGURES_DIR, "Figure5A.pdf"), plot = p_il1b, dpi = 300, units = "in", width = 6, height = 4)
+save_figure(p_il1b, "Figure5A", width = 6, height = 4)
 
 # Figure 5B: IL-18
 p_il18 <- plot_cytokine("IL18", master_paired)
-ggsave(file.path(FIGURES_DIR, "Figure5B.png"), plot = p_il18, dpi = 300, units = "in", width = 6, height = 4)
-ggsave(file.path(FIGURES_DIR, "Figure5B.pdf"), plot = p_il18, dpi = 300, units = "in", width = 6, height = 4)
+save_figure(p_il18, "Figure5B", width = 6, height = 4)

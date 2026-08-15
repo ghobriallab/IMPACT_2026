@@ -51,17 +51,17 @@ p <- ggplot(plotdf, aes(x = Disease_Recoded, y = ELISA_Titer, fill = Disease_Rec
              show.legend = FALSE) +
   scale_fill_manual(values = color_palette) +
   theme(
-    axis.text.x = element_text(angle = 0, hjust = 0.5, color = "black", size = 12),
-    axis.text.y = element_text(color = "black", size = 12),
-    axis.title = element_text(size = 14),
+    axis.text.x = element_text(angle = 0, hjust = 0.5, color = "black", size = 12, family = FONT),
+    axis.text.y = element_text(color = "black", size = 12, family = FONT),
+    axis.title = element_text(size = 14, family = FONT),
     panel.background = element_blank(),
     panel.border = element_rect(fill = NA, color = "black"),
-    strip.text = element_text(size = 12, face = "plain"),
+    strip.text = element_text(size = 12, face = "plain", family = FONT),
     strip.background = element_blank(),
-    plot.title = element_text(size = 12, hjust = 0.5)
+    plot.title = element_text(size = 12, hjust = 0.5, family = FONT)
   ) +
   xlab("") +
-  ylab(bquote(ELISA ~ Titer["(OD450nm-570nm)"])) +
+  ylab(bquote("ELISA Titer"["(OD450nm-570nm)"])) +
   ggtitle("After 3rd Dose") +
   scale_x_discrete(labels = function(x) {
     pretty <- gsub(":", "\n", x)
@@ -116,14 +116,14 @@ stat.test$y.position <- .ymax + 0.25 +
 .ylim_hi <- .jt_y + 0.55
 
 bxp_padj <- p +
-  stat_pvalue_manual(stat.test, label = "bracket_label",
+  stat_pvalue_manual(family = FONT, stat.test, label = "bracket_label",
                      tip.length = 0.02, size = 3.6,
                      inherit.aes = FALSE, hide.ns = FALSE) +
   annotate("segment", x = 1, xend = 3, y = .jt_y, yend = .jt_y, linewidth = 0.6) +
   annotate("segment", x = 1, xend = 1, y = .jt_y - 0.06, yend = .jt_y, linewidth = 0.6) +
   annotate("segment", x = 3, xend = 3, y = .jt_y - 0.06, yend = .jt_y, linewidth = 0.6) +
-  annotate("text", x = 2.5, y = .jt_y + 0.30, label = jt_label(.jt),
+  annotate("text", family = FONT, x = 2.5, y = .jt_y + 0.30, label = jt_label(.jt),
            size = 3.8, fontface = "italic") +
   coord_cartesian(ylim = c(NA, .ylim_hi), clip = "off")
 
-ggsave(file.path(FIGURES_DIR, "Figure1F.png"), bxp_padj, dpi = 300, unit = "in", width = 5.0, height = 4.0)
+save_figure(bxp_padj, "Figure1F", width = 5.0, height = 4.0)
