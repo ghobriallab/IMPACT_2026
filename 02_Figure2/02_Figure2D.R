@@ -2,8 +2,9 @@
 # Purpose:      Figure 2D: panel-wide Olink screen. Every protein on the panel is tested for a
 #               disease-vs-HD difference at both timepoints, and the resulting q-values are plotted
 #               against each other, so the reader can see that APRIL (TNFSF13) is not a pre-selected
-#               candidate but the top hit of an unbiased screen. Contrasts shown are HD vs SMM and
-#               HD vs MGUS. Comparisons are age- and sex-adjusted rank-based ANCOVA, Benjamini-
+#               candidate but the top hit of an unbiased screen. All three pairwise contrasts are
+#               shown, SMM vs HD, MGUS vs HD and SMM vs MGUS, so the panel displays the same 156
+#               tests the q-values were corrected across. Comparisons are age- and sex-adjusted rank-based ANCOVA, Benjamini-
 #               Hochberg corrected across all 156 tests within a timepoint (52 proteins x 3 pairwise
 #               contrasts), the same family used throughout the Olink analysis.
 # Inputs:       data/olink/olink_paired_prepost.csv, data/elisa/elisa_cohort_demographics.csv.
@@ -127,25 +128,42 @@ for (tp in c("Pre-Vx", "Post-Vx")) {
 
 # ---------------------------------------------------------------- panel
 Q_THRESH <- 0.1
-LAB <- c("Healthy vs SMM" = "SMM vs HD", "Healthy vs MGUS" = "MGUS vs HD")
+# All three contrasts of the correction family are drawn, so the panel shows the same 156 tests
+# the q-values were corrected across rather than a subset of them.
+LAB <- c("Healthy vs SMM" = "SMM vs HD", "Healthy vs MGUS" = "MGUS vs HD",
+         "MGUS vs SMM" = "SMM vs MGUS")
 
 plot_df <- res %>%
   filter(Contrast %in% names(LAB)) %>%
   select(Protein, Contrast, Timepoint, q_adjusted) %>%
   pivot_wider(names_from = Timepoint, values_from = q_adjusted) %>%
   mutate(x = -log10(`Pre-Vx`), y = -log10(`Post-Vx`),
-         Comparison = factor(LAB[Contrast], levels = c("SMM vs HD", "MGUS vs HD")),
+         Comparison = factor(LAB[Contrast],
+                             levels = c("SMM vs HD", "MGUS vs HD", "SMM vs MGUS")),
          sig_both = `Pre-Vx` < Q_THRESH & `Post-Vx` < Q_THRESH)
+
+# Benjamini-Hochberg is a step-up procedure, so many proteins inherit exactly the same q and their
+# points would sit on top of one another: 15 of them share a single coordinate without this. The
+# offset is applied once, from a fixed seed, and stored as a column so the point and its label use
+# the same position. It is well below the distance to the significance lines, so no point can be
+# nudged across a threshold.
+JITTER <- 0.018
+set.seed(2026)
+plot_df <- plot_df %>%
+  mutate(xj = x + runif(n(), -JITTER, JITTER),
+         yj = y + runif(n(), -JITTER, JITTER))
+message(sprintf("plotted points: %d (%d proteins x %d contrasts)",
+                nrow(plot_df), n_distinct(plot_df$Protein), length(LAB)))
 
 # Only APRIL is labelled; every other protein is identifiable from the source-data CSVs.
 lab_df <- plot_df %>% filter(Protein == "TNFSF13", Comparison == "SMM vs HD")
 # The two axes span very different ranges (the strongest pre-Vx hit is far weaker than
 # the strongest post-Vx hit), so a single square limit left roughly 40% of the panel empty. Each
 # axis now gets its own data-driven limit, which fills the wider canvas.
-xlim_hi <- max(plot_df$x) * 1.13
-ylim_hi <- max(plot_df$y) * 1.10
+xlim_hi <- max(plot_df$xj) * 1.13
+ylim_hi <- max(plot_df$yj) * 1.10
 
-p <- ggplot(plot_df, aes(x, y, fill = Comparison)) +
+p <- ggplot(plot_df, aes(xj, yj, fill = Comparison)) +
   geom_hline(yintercept = -log10(Q_THRESH), linetype = "dashed",
              colour = "grey40", linewidth = 0.4) +
   geom_vline(xintercept = -log10(Q_THRESH), linetype = "dashed",
@@ -160,11 +178,13 @@ p <- ggplot(plot_df, aes(x, y, fill = Comparison)) +
   # MGUS takes the same mustard/orange used for MGUS in the APRIL panel (03_Figure2E.R);
   # SMM keeps the project red.
   scale_fill_manual(values = c("SMM vs HD" = unname(COLORS["SMM"]),
-                               "MGUS vs HD" = "orange")) +
+                               "MGUS vs HD" = "orange",
+                               "SMM vs MGUS" = "#3C5488")) +
   coord_cartesian(xlim = c(0, xlim_hi), ylim = c(0, ylim_hi)) +
   labs(title = "Olink screen, 52 proteins",
-       subtitle = paste("Age- and sex-adjusted ANCOVA vs HD\n",
-                        "BH-corrected across 156 tests per timepoint", sep = ""),
+       subtitle = paste("Age- and sex-adjusted rank-based ANCOVA\n",
+                        "All 156 tests per timepoint, BH-corrected together; points jittered",
+                        sep = ""),
        # Plain Unicode rather than plotmath: the plotmath unary minus collides with the "l" of log
        # in the default device font.
        x = "Pre-Vx  \u2212log\u2081\u2080(q)",
