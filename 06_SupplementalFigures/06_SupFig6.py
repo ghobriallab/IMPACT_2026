@@ -4,11 +4,13 @@
 Purpose:      Supplementary Figure 6: shipment control for Figure 5C. Figure 5C is a
               within-participant paired test, so it is protected by design wherever a
               participant's two samples share a shipment status, which is the case for
-              45 of the 52 paired participants. (A) repeats the Figure 5C paired test
-              separately in shipped and in non-shipped participants; (B) asks directly
-              whether the pre-to-post change differs by shipment, in treatment-naive SMM,
-              the only group containing both. Groups match Figure 5C exactly: HD, MGUS and
-              treatment-naive SMM, with previously treated SMM and MM excluded.
+              45 of the 52 paired participants. Both panels are restricted to treatment-naive
+              SMM, the only Figure 5C group containing both shipped and non-shipped
+              participants: every paired HD and every paired MGUS participant was shipped.
+              (A) repeats the Figure 5C paired test separately in each shipment stratum;
+              (B) asks directly whether the pre-to-post change differs by shipment. The
+              underlying cohort matches Figure 5C exactly, with previously treated SMM and
+              MM excluded.
 
 Inputs:       H5AD_IL1B (scRNAseq_IMPACT_Zenodo.h5ad), data/il1b_response_genes_human.csv,
               data/hvg_2678_genes.txt, and data/metadata/Supplementary_Table_4_scRNAseq_sample_list.csv
@@ -59,7 +61,8 @@ _spec = importlib.util.spec_from_file_location(
 fig5c = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(fig5c)
 
-GROUPS = ['HD', 'MGUS', 'SMM']            # exactly Figure 5C's groups
+GROUPS = ['HD', 'MGUS', 'SMM']            # exactly Figure 5C's groups (the canonical gate)
+PLOT_GROUP = 'SMM'                        # the only group with both shipment strata
 ARMS = ['Shipped', 'Not shipped']
 SHIP_MAP = {1.0: 'Shipped', 0.0: 'Not shipped'}
 MIN_PAIRS = 3
@@ -165,8 +168,10 @@ def main():
                 rec['effsize'] = fig5c.paired_effect_size(s['Post-Vx'].values, s['Pre-Vx'].values)
             rows.append(rec)
     stA = pd.DataFrame(rows)
-    ok = stA['p'].notna()
-    stA.loc[ok, 'q'] = multipletests(stA.loc[ok, 'p'], method='fdr_bh')[1]
+    # Every group is computed for the record, but the correction family is the two contrasts the
+    # panel actually shows; HD and MGUS have no non-shipped stratum, so they carry no contrast.
+    plotted = stA['p'].notna() & (stA['Disease'] == PLOT_GROUP)
+    stA.loc[plotted, 'q'] = multipletests(stA.loc[plotted, 'p'], method='fdr_bh')[1]
 
     # --- panel B: does the change itself depend on shipment? --------------------------------
     smm = d[(d['Disease'] == 'SMM') & (d['stratum'].isin(ARMS))]
@@ -188,21 +193,20 @@ def main():
     PRE, POST = "#4682B4", "#EE5C42"      # the Figure 5C timepoint colours
     BOX_LINE = "#333333"
     rng = np.random.default_rng(RNG_SEED)
-    fig = plt.figure(figsize=(8.4, 9.2))
-    gs = fig.add_gridspec(3, 3, height_ratios=[1, 1, 1.15], hspace=0.62, wspace=0.32)
+    fig = plt.figure(figsize=(7.2, 7.6))
+    gs = fig.add_gridspec(2, 2, height_ratios=[1, 1.05], hspace=0.5, wspace=0.3)
 
     vals = np.r_[d['Pre-Vx'].values, d['Post-Vx'].values]
     ymin, ymax = vals.min(), vals.max()
     span = max(ymax - ymin, 1e-9)
 
-    for ri, arm in enumerate(ARMS):
-        for ci, g in enumerate(GROUPS):
-            ax = fig.add_subplot(gs[ri, ci])
+    for ci, arm in enumerate(ARMS):
+            g = PLOT_GROUP
+            ax = fig.add_subplot(gs[0, ci])
             s = d[(d['Disease'] == g) & (d['stratum'] == arm)]
             row = stA[(stA['Disease'] == g) & (stA['stratum'] == arm)].iloc[0]
             if len(s) == 0:
-                msg = 'no non-shipped\nparticipants' if arm == 'Not shipped' else 'no shipped\nparticipants'
-                ax.text(0.5, 0.5, msg, ha='center', va='center',
+                ax.text(0.5, 0.5, 'no participants', ha='center', va='center',
                         fontsize=10, style='italic', color='#555555', transform=ax.transAxes)
                 ax.set_xticks([]); ax.set_yticks([])
             else:
@@ -238,11 +242,11 @@ def main():
                 ax.set_ylim(ymin - 0.05 * span, ymax + 0.32 * span)
             for side in ("top", "right", "bottom", "left"):
                 ax.spines[side].set_visible(True); ax.spines[side].set_color("black")
-            ax.set_title(f"{g}, {arm.lower()}\n(n={len(s)})", fontsize=12)
+            ax.set_title(f"Treatment-naive SMM, {arm.lower()}\n(n={len(s)})", fontsize=12)
             if ci == 0 and len(s):
                 ax.set_ylabel("IL-1β response score", fontsize=12)
 
-    axB = fig.add_subplot(gs[2, 1])
+    axB = fig.add_subplot(gs[1, 0])
     ARM_COLORS = {'Shipped': '#4682B4', 'Not shipped': '#EE5C42'}
     dv = [a, b]
     bp = axB.boxplot(dv, positions=[1, 2], widths=0.7, showfliers=False, patch_artist=True,
@@ -270,11 +274,14 @@ def main():
         axB.spines[side].set_visible(True); axB.spines[side].set_color("black")
 
     fig.text(0.02, 0.975, "A", fontsize=17, fontweight="bold")
-    fig.text(0.02, 0.335, "B", fontsize=17, fontweight="bold")
-    n_mixed = int((d['stratum'] == 'Mixed or not recorded').sum())
-    fig.text(0.5, 0.055, f"{n_mixed} of {len(d)} paired participants have samples that differ in "
-                         "shipment status, or no record, and appear in neither stratum.",
-             ha='center', fontsize=9, style='italic', color='#555555')
+    fig.text(0.02, 0.475, "B", fontsize=17, fontweight="bold")
+    smm_all = d[d['Disease'] == PLOT_GROUP]
+    n_mixed = int((smm_all['stratum'] == 'Mixed or not recorded').sum())
+    fig.text(0.5, 0.03,
+             f"All paired HD (n=18) and MGUS (n=14) participants were shipped, so neither group "
+             f"supports this comparison.\n{n_mixed} of {len(smm_all)} paired SMM participants "
+             "have samples that differ in shipment status, or no record, and appear in neither stratum.",
+             ha='center', fontsize=8.5, style='italic', color='#555555')
 
     for ext in ("png", "pdf", "svg"):
         out = FIGURES_DIR / f"SupFig6.{ext}"

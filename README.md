@@ -158,7 +158,7 @@ Folders carry a numeric prefix matching their manuscript-figure order, and scrip
 |------------------|--------|----------|-------------|
 | S1 | `06_SupplementalFigures/01_SupFig1.py` | Python | Vaccine response by SMM 20/2/20 risk tier (LR / IR / HR), with per-tier treated/treatment-naive n annotated |
 | S2 | `06_SupplementalFigures/02_SupFig2.py` | Python | Per-lineage cell-type annotation UMAPs + canonical marker-gene heatmaps |
-| S3A | `06_SupplementalFigures/03_SupFig3A_shipment.py` | Python | Sample shipment and myeloid TNFSF13 (APRIL) expression (shipment control for Figure 3C) |
+| S3A | `06_SupplementalFigures/03_SupFig3A_shipment.py` | Python | Figure 3C reproduced on shipped samples only (shipment control for Figure 3C) |
 | S3B | `06_SupplementalFigures/03_SupFig3.py` | Python | Bone-marrow myeloid TNFSF13 (APRIL) across HD/MGUS/SMM/MM (Zavidij GSE124310) |
 | S4 | `06_SupplementalFigures/04_SupFig4.py` | Python | External validation of the APRIL-responsive gene signature in APRIL-stimulated plasmablasts (GSE173644) |
 | S5 | `06_SupplementalFigures/05_SupFig5.R` | R | Sample shipping (shipped vs not shipped) does not confound SARS-CoV-2 spike-specific TCR clonotype frequencies (paired-design control for Figure 4B) |

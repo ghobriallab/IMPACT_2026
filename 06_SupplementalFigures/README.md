@@ -6,7 +6,7 @@ Code to reproduce the Supplementary Figures. Supplementary figures are numbered 
 |------------|--------|-------------|
 | S1 | `01_SupFig1.py` | Vaccine response by SMM 20/2/20 risk tier (Fig 1B/1C/1F equivalents stratified into LR / IR / HR-SMM), with per-tier treated-vs-naive n's annotated on each column |
 | S2 | `02_SupFig2.py` | Per-lineage cell-type annotation UMAPs + canonical marker-gene heatmaps for the integrated scRNA-seq object |
-| S3A | `03_SupFig3A_shipment.py` | Sample shipment and myeloid TNFSF13 (APRIL) expression; shipment control for Figure 3C |
+| S3A | `03_SupFig3A_shipment.py` | Figure 3C reproduced on shipped samples only; shipment control for Figure 3C |
 | S3B | `03_SupFig3.py` | Bone-marrow myeloid TNFSF13 (APRIL) expression across HD/MGUS/SMM/MM (Zavidij et al. 2020, GSE124310) |
 | S4 | `04_SupFig4.py` | External validation of the APRIL-responsive gene signature in APRIL-stimulated plasmablasts (GSE173644) |
 | S5 | `05_SupFig5.R` | Sample shipping (shipped vs not shipped) does not confound SARS-CoV-2 spike-specific TCR clonotype frequencies; paired-design control for Figure 4B |
@@ -18,7 +18,7 @@ Same conventions as the main figures: age- and sex-adjusted rank-based ANCOVA fo
 
 S5 reports an unadjusted two-sided Wilcoxon rank-sum test at each timepoint. Clonotype proportions are expressed as percentages, matching the y-axis of Figure 4B.
 
-The three shipment controls (S3A, S5, S6) all define shipment from `Shipment_FedEx` in Supplementary Table 4, where 1 is shipped and 0 is not shipped. A blank field is excluded rather than assumed shipped, so a missing record never counts as evidence either way. S3A compares shipped with non-shipped participants within each disease group and then recomputes the Figure 3C contrasts on shipped samples only; S6 repeats the Figure 5C paired test within each shipment stratum and asks separately whether the pre-to-post change depends on shipment. Both assert that they reproduce the published panel before reporting any stratified result.
+The three shipment controls (S3A, S5, S6) all define shipment from `Shipment_FedEx` in Supplementary Table 4, where 1 is shipped and 0 is not shipped. A blank field is excluded rather than assumed shipped, so a missing record never counts as evidence either way. S3A reproduces Figure 3C using only samples documented as shipped, holding shipment constant; S6 repeats the Figure 5C paired test within each shipment stratum and asks separately whether the pre-to-post change depends on shipment, both restricted to treatment-naive SMM because every paired HD and MGUS participant was shipped. Both assert that they reproduce the published panel before reporting any stratified result.
 
 ## Inputs
 

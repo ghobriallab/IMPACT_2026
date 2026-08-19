@@ -60,6 +60,19 @@ NORMAL_C, TUMOR_C = '#4DBBD5', '#E64B35'   # blue = non-malignant, red = maligna
 df = pd.read_csv(DATA_DIR / "external" / "swiftseq_april_persample_deid.csv")
 df = df[(df.n_normal_PC >= MIN_CELLS) & (df.n_tumor_PC >= MIN_CELLS)]
 
+# ONE SAMPLE PER PARTICIPANT PER COMPARTMENT. Fourteen participants contributed more than one
+# qualifying sample to the same compartment (one contributed four), and a paired test that treats
+# those as independent would weight those participants several times over. Keep the earliest
+# serial timepoint, Timepoint_Index 1 where it qualifies; ties are technical replicates of the
+# same timepoint and are broken on Sample_ID so the choice is deterministic. The filter is applied
+# after the cell-count threshold so a participant whose first timepoint fails QC is represented by
+# its next qualifying timepoint rather than dropped.
+_before = len(df)
+df = (df.sort_values(['Patient_ID', 'Compartment', 'Timepoint_Index', 'Sample_ID'])
+        .drop_duplicates(['Patient_ID', 'Compartment'], keep='first'))
+print(f"One sample per participant per compartment: kept {len(df)} of {_before} qualifying samples")
+assert not df.duplicated(['Patient_ID', 'Compartment']).any()
+
 COMPS = [('BM', 'Bone marrow'), ('PB', 'Peripheral blood')]
 data, colors, labels, ps, pairs = [], [], [], [], []
 for key, _ in COMPS:
