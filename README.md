@@ -47,7 +47,7 @@ Raw sequencing data are deposited at GEO under accession GSEXXXXXX.
 |-----------|-----------|---------|
 | [GSE193531](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193531) | Boiarsky et al., *Nat Commun* 2022 | Figure 3D |
 | [phs003855](https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id=phs003855) (dbGaP, controlled access) | Lightbody et al., *Nat Cancer* 2025 (SWIFT-seq) | Figure 3E |
-| [GSE124310](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE124310) | Zavidij et al., *Nat Cancer* 2020 | Supplementary Figure 3 |
+| [GSE124310](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE124310) | Zavidij et al., *Nat Cancer* 2020 | Supplementary Figure 3B |
 | [GSE173644](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE173644) | Stephenson et al., *J Immunol* 2022 | Supplementary Figure 4 |
 
 Cell-level metadata for GSE193531 and the GSE173644 time-course matrix are included in the Zenodo deposit; GSE124310 sample matrices are downloaded directly by `06_SupplementalFigures/03_SupFig3.py`.
@@ -158,9 +158,11 @@ Folders carry a numeric prefix matching their manuscript-figure order, and scrip
 |------------------|--------|----------|-------------|
 | S1 | `06_SupplementalFigures/01_SupFig1.py` | Python | Vaccine response by SMM 20/2/20 risk tier (LR / IR / HR), with per-tier treated/treatment-naive n annotated |
 | S2 | `06_SupplementalFigures/02_SupFig2.py` | Python | Per-lineage cell-type annotation UMAPs + canonical marker-gene heatmaps |
-| S3 | `06_SupplementalFigures/03_SupFig3.py` | Python | Bone-marrow myeloid TNFSF13 (APRIL) across HD/MGUS/SMM/MM (Zavidij GSE124310) |
+| S3A | `06_SupplementalFigures/03_SupFig3A_shipment.py` | Python | Sample shipment and myeloid TNFSF13 (APRIL) expression (shipment control for Figure 3C) |
+| S3B | `06_SupplementalFigures/03_SupFig3.py` | Python | Bone-marrow myeloid TNFSF13 (APRIL) across HD/MGUS/SMM/MM (Zavidij GSE124310) |
 | S4 | `06_SupplementalFigures/04_SupFig4.py` | Python | External validation of the APRIL-responsive gene signature in APRIL-stimulated plasmablasts (GSE173644) |
 | S5 | `06_SupplementalFigures/05_SupFig5.R` | R | Sample shipping (shipped vs not shipped) does not confound SARS-CoV-2 spike-specific TCR clonotype frequencies (paired-design control for Figure 4B) |
+| S6 | `06_SupplementalFigures/06_SupFig6.py` | Python | Sample shipment and the IL-1beta response signature (shipment control for Figure 5C) |
 
 ### Execution order
 
@@ -168,7 +170,7 @@ Most scripts are independent. The only intra-folder dependency is:
 
 - **`03_Figure5DEF.R`** sources **`01_Figure5AB.R`** for its data prep and the `plot_cytokine()` helper.
 
-Scripts requiring the scRNA-seq h5ad file: `03_Figure3/01_Figure3B.py`, `03_Figure3/02_Figure3C.py`, `05_Figure5/02_Figure5C.py` and `06_SupplementalFigures/02_SupFig2.py`. The remaining Figure 3 scripts run from the external tables shipped in the deposit.
+Scripts requiring the scRNA-seq h5ad file: `03_Figure3/01_Figure3B.py`, `03_Figure3/02_Figure3C.py`, `05_Figure5/02_Figure5C.py`, `06_SupplementalFigures/02_SupFig2.py`, `06_SupplementalFigures/03_SupFig3A_shipment.py` and `06_SupplementalFigures/06_SupFig6.py`. The remaining Figure 3 scripts run from the external tables shipped in the deposit.
 
 ## Reproducibility
 
