@@ -3,9 +3,13 @@
 
 Purpose:      Supplementary Figure 2: per-lineage cell-type annotation UMAPs + canonical marker-gene heatmaps for the integrated scRNA-seq object (B-cell, T-cell, monocyte, dendritic-cell and NK lineages).
 
-Inputs:       Per-lineage subcluster h5ad files in SUBCLUSTER_DIR (bcell, tcell, mono, dc, nk).
+Inputs:       Per-lineage subcluster h5ad files in SUBCLUSTER_DIR (bcell, tcell, mono, dc, nk)
+              for the UMAP coordinates and subtype labels, and H5AD_NORM for the expression
+              values behind the heatmaps; the subcluster objects carry no expression matrix.
 
-Outputs:      figures/SupFig2.png (lineage-by-lineage UMAP + heatmap grid).
+Outputs:      figures/SupFig2.png (and PDF + SVG). The UMAP scatter is rasterized inside the
+              vector formats, since a fully vector embedding of ~1.08M cells is unusable; all
+              text, axes and heatmaps stay vector.
 
 Dependencies: Python + scanpy, matplotlib, numpy, pandas; reads config.py.
 """
@@ -24,9 +28,34 @@ import numpy as np
 import pandas as pd
 from matplotlib import colormaps
 from matplotlib.patheffects import withStroke
+from matplotlib import font_manager as _fm
+import glob as _glob
 
-plt.rcParams['font.family'] = 'sans-serif'
+# Every figure in this paper is set in Arial; fall back to the metrically identical Liberation
+# Sans and rewrite the SVG font-family. svg.fonttype="none" keeps text editable.
+FONT = "Arial"
+_av = {f.name for f in _fm.fontManager.ttflist}
+if FONT not in _av:
+    for _p in _glob.glob("/usr/share/fonts/**/LiberationSans-*.ttf", recursive=True):
+        _fm.fontManager.addfont(_p)
+    _av = {f.name for f in _fm.fontManager.ttflist}
+PLOT_FONT = FONT if FONT in _av else ("Liberation Sans" if "Liberation Sans" in _av else "sans-serif")
+plt.rcParams['font.family'] = PLOT_FONT
 plt.rcParams['font.size'] = 8
+plt.rcParams['svg.fonttype'] = 'none'
+
+
+def save_figure(basename, dpi=300):
+    for ext in ("png", "pdf", "svg"):
+        out = FIGURES_DIR / f"{basename}.{ext}"
+        plt.savefig(out, dpi=dpi, bbox_inches='tight', facecolor='white')
+        if ext == "svg" and PLOT_FONT != FONT:
+            s = Path(out).read_text(encoding="utf-8")
+            for q in ('"', "'"):
+                s = s.replace(f"font-family: {q}{PLOT_FONT}{q}", f"font-family: {FONT}")
+            s = s.replace(f"font-family: {PLOT_FONT}", f"font-family: {FONT}")
+            Path(out).write_text(s, encoding="utf-8")
+        print(f"Saved: {out.name}")
 
 LINEAGE_ORDER = ['bcell', 'tcell', 'mono', 'dc', 'nk']
 
@@ -34,7 +63,7 @@ LINEAGE_CONFIG = {
     'bcell': {
         'file': 'bcell_clean_hmy_pt_subtype.h5ad',
         'annotation_col': 'cell_subtype',
-        'cell_types': ['TBC', 'NBC', 'aNBC', 'NCSMBC', 'MBC', 'aMBC', 'IFN+ BC', 'ABC'],
+        'cell_types': ['TBC', 'NBC', 'aNBC', 'MBC', 'aMBC', 'IFN+ BC', 'ABC'],
         'markers': [
             'CD19', 'MS4A1', 'CD79A', 'CD79B',
             'CD38', 'IGHM', 'IGHD', 'TCL1A', 'IL4R', 'SELL', 'FCER2', 'CCR7',
@@ -86,8 +115,9 @@ LINEAGE_CONFIG = {
             'CLEC9A', 'XCR1', 'CADM1', 'BATF3',
             'CLEC10A', 'FCER1A', 'CD1C',
             'IL1B', 'CXCL8', 'CCL3', 'TNF',
-            'CD83', 'CCR7', 'LAMP3',
+            'CD83', 'CCR7', 'LAMP3', 'FOSB',
             'ISG15', 'IFI44L', 'MX1',
+            'MKI67',
             'CD14', 'S100A8', 'S100A9',
             'IL3RA', 'LILRA4', 'TCF4', 'IRF7',
             'AXL', 'SIGLEC6'
@@ -113,11 +143,26 @@ LINEAGE_CONFIG = {
 FULL_ADATA = None
 
 def load_full_data():
+    """Expression for the marker genes only.
+
+    The heatmaps need about 150 of the 42,090 genes, so only those columns are retained and the
+    five per-lineage slices below are then cheap. Note the PEAK is still high, around 45 GB
+    observed: anndata reads the backed sparse matrix before subsetting it, so this trades a
+    persistent 50 GB object for a transient one. Streaming the CSR row-blocks with h5py and
+    accumulating only the wanted columns would remove the peak entirely.
+    """
     global FULL_ADATA
     if FULL_ADATA is None:
-        print("Loading full expression data...")
-        FULL_ADATA = sc.read_h5ad(H5AD_NORM)
-        print(f"  {FULL_ADATA.n_obs:,} cells x {FULL_ADATA.n_vars:,} genes")
+        print("Loading marker-gene expression...")
+        wanted = sorted({m for cfg in LINEAGE_CONFIG.values() for m in cfg['markers']})
+        backed = sc.read_h5ad(H5AD_NORM, backed='r')
+        keep = [g for g in wanted if g in backed.var_names]
+        missing = [g for g in wanted if g not in backed.var_names]
+        if missing:
+            print(f"  markers absent from the object: {missing}")
+        FULL_ADATA = backed[:, keep].to_memory()
+        backed.file.close()
+        print(f"  {FULL_ADATA.n_obs:,} cells x {FULL_ADATA.n_vars:,} marker genes")
     return FULL_ADATA
 
 
@@ -234,7 +279,8 @@ def plot_heatmap_to_ax(ax, cell_barcodes, annotations, cell_types, markers, scal
     im = ax.imshow(zscore_expr.values, cmap=cmap, aspect='auto', vmin=-vmax, vmax=vmax)
 
     ax.set_xticks(range(len(available_markers)))
-    ax.set_xticklabels(available_markers, rotation=90, fontsize=4, ha='center')
+    ax.set_xticklabels(available_markers, rotation=90, fontsize=4, ha='center',
+                       fontstyle='italic')
     ax.set_yticks(range(len(cell_types)))
     ax.set_yticklabels(cell_types, fontsize=5)
     ax.set_title(title, fontsize=7, fontweight='bold', pad=2)
@@ -283,9 +329,8 @@ def main():
                           config['cell_types'], config['markers'],
                           config['scale_max'], config['title'])
 
-    plt.savefig(FIGURES_DIR / "SupFig2.png", dpi=300, bbox_inches='tight', facecolor='white')
+    save_figure("SupFig2")
     plt.close()
-    print("Saved: SupFig2.png")
 
 
 if __name__ == "__main__":

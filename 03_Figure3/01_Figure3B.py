@@ -51,12 +51,16 @@ def save_figure(basename, dpi=300):
 plt.rcParams['font.size'] = 14
 
 # Load data
-adata = sc.read_h5ad(H5AD_ANNOTATED)
+# Backed: this panel needs only obs and obsm['X_umap']. Reading the object into memory would
+# materialise X and the int64 counts layer, about 50 GB, for ~14 MB of payload.
+adata = sc.read_h5ad(H5AD_ANNOTATED, backed='r')
 print(f"Loaded {adata.n_obs:,} cells")
 
 # Remove QC_removed and doublets
 mask_qc = adata.obs['Annotation_Level_2'] != 'QC_removed'
 mask_doublets = ~adata.obs['Annotation_Level_2'].str.startswith('db:')
+# CLL was excluded upstream and is not a category in the deposited object, so this is a no-op
+# there; it is kept so the script behaves correctly on the pre-deidentification object too.
 mask_cll = adata.obs['Annotation_Level_2'] != 'CLL'
 mask_clean = mask_qc & mask_doublets & mask_cll
 
@@ -67,19 +71,28 @@ print(f"Cells to plot: {n_cells_clean:,}")
 umap_coords = adata.obsm['X_umap'][mask_clean.values]
 annotations = adata.obs.loc[mask_clean, 'Annotation_Level_2'].values
 
-unique_cats = pd.Series(annotations).unique()
-n_cats = len(unique_cats)
+# Subtypes folded into their parent population. The deposited object carries the merge as well,
+# so this is a safety net that keeps the panel correct against either version of the data.
+MERGE_LABELS = {'NCSMBC': 'MBC'}
 
-# Assign colors
+# Colours are assigned by order of first appearance, so the palette is built BEFORE the merge.
+# Building it afterwards would shift every category that follows a merged one by a colormap slot
+# and recolour most of the panel.
+cats_for_palette = pd.Series(annotations).unique()
+n_cats = len(cats_for_palette)
 if n_cats <= 20:
     cmap = colormaps['tab20']
-    color_dict = {cat: cmap(i % 20) for i, cat in enumerate(unique_cats)}
+    color_dict = {cat: cmap(i % 20) for i, cat in enumerate(cats_for_palette)}
 else:
     colors1 = [colormaps['tab20'](i) for i in range(20)]
     colors2 = [colormaps['tab20b'](i) for i in range(20)]
     colors3 = [colormaps['tab20c'](i) for i in range(20)]
     all_colors = colors1 + colors2 + colors3
-    color_dict = {cat: all_colors[i % 60] for i, cat in enumerate(unique_cats)}
+    color_dict = {cat: all_colors[i % 60] for i, cat in enumerate(cats_for_palette)}
+
+annotations = pd.Series(annotations).astype(str).replace(MERGE_LABELS).values
+unique_cats = pd.Series(annotations).unique()
+print(f"Categories plotted: {len(unique_cats)} (merged: {MERGE_LABELS})")
 
 # Cluster centroids for label placement
 centroids = {}
@@ -94,7 +107,7 @@ manual_offsets = {
     'ccDC2': (2, -2), 'IFN+ cDC2': (2.5, -0.3),
     'NBC': (1.5, -1.5), 'TBC': (0, -2), 'aNBC': (-1.5, -1.5),
     'IFN+ BC': (-2, -0.8), 'aMBC': (-1.8, 0.8),
-    'aNCSMBC': (1.8, 0.8), 'MBC': (2, 0), 'NCSMBC': (2, -0.8),
+    'MBC': (2, -0.4),
     'ABC': (1.5, 1.2),
     'HLA-DR-high CD14+ Mono': (1.5, 1), 'IFN+ CD14+ Mono': (2, -0.5),
     'cNK': (-1.5, 0.5), 'IFN+ NK': (-1.5, 1),

@@ -50,8 +50,9 @@ and figure source data to `tables/`.
 |-------|--------|-------------|
 | S1 | `06_SupplementalFigures/01_SupFig1.py` | Vaccine response by SMM 20/2/20 risk tier |
 | S2 | `06_SupplementalFigures/02_SupFig2.py` | Per-lineage annotation UMAPs and marker heatmaps |
-| S3A | `06_SupplementalFigures/03_SupFig3A.py` | Figure 3C on shipped samples only |
-| S3B | `06_SupplementalFigures/03_SupFig3B.py` | Bone-marrow myeloid TNFSF13 (Zavidij, GSE124310) |
+| S3A | `06_SupplementalFigures/03_SupFig3A.py` | Myeloid TNFSF13 by shipment status, SMM |
+| S3B | `06_SupplementalFigures/03_SupFig3B.py` | Figure 3C on shipped samples only |
+| S3C | `06_SupplementalFigures/03_SupFig3C.py` | Bone-marrow myeloid TNFSF13 (Zavidij, GSE124310) |
 | S4A | `06_SupplementalFigures/04_SupFig4A.py` | APRIL signature in stimulated plasmablasts (GSE173644) |
 | S4B | `06_SupplementalFigures/04_SupFig4B.py` | APRIL module in marrow plasma cells (Boiarsky, GSE193531) |
 | S5 | `06_SupplementalFigures/05_SupFig5.R` | Shipment control for Figure 4B |
@@ -84,7 +85,7 @@ Raw sequencing data are deposited at GEO under accession GSEXXXXXX.
 | Accession | Reference | Used in |
 |-----------|-----------|---------|
 | [phs003855](https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id=phs003855) (dbGaP, controlled access) | Lightbody et al., *Nat Cancer* 2025 (SWIFT-seq) | Figures 3D and 3E |
-| [GSE124310](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE124310) | Zavidij et al., *Nat Cancer* 2020 | Supplementary Figure 3B |
+| [GSE124310](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE124310) | Zavidij et al., *Nat Cancer* 2020 | Supplementary Figure 3C |
 | [GSE173644](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE173644) | Stephenson et al., *J Immunol* 2022 | Supplementary Figure 4A |
 | [GSE193531](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193531) | Boiarsky et al., *Nat Commun* 2022 | Supplementary Figure 4B |
 
@@ -142,7 +143,7 @@ Scripts are independent, with one exception: `05_Figure5/03_Figure5DEF.R` source
 
 These read the single-cell object and need the memory to match: `03_Figure3/01_Figure3B.py`,
 `03_Figure3/02_Figure3C.py`, `05_Figure5/02_Figure5C.py`,
-`06_SupplementalFigures/02_SupFig2.py`, `03_SupFig3A.py` and `06_SupFig6.py`. Every other script
+`06_SupplementalFigures/02_SupFig2.py`, `03_SupFig3A.py`, `03_SupFig3B.py` and `06_SupFig6.py`. Every other script
 runs from the tabular inputs.
 
 ## Reproducibility check

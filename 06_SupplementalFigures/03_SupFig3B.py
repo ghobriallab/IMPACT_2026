@@ -1,32 +1,25 @@
 #!/usr/bin/env python3
-"""Supplementary Figure 3B: bone-marrow myeloid TNFSF13 (APRIL) expression across HD/MGUS/SMM/MM.
+"""Supplementary Figure 3B: Figure 3C reproduced on shipped samples only.
 
-Purpose:      Extends the peripheral-blood myeloid TNFSF13 analysis of Figure 3C into the bone
-              marrow, the site where plasma cells survive, using the CD138-depleted marrow
-              scRNA-seq of Zavidij et al. (Nat Cancer 2020, GSE124310).
+Purpose:      Shipment control for Figure 3C, part two. Figure 3C reports no
+              difference in myeloid TNFSF13 (APRIL) expression between disease groups. Because
+              shipment is unevenly distributed across those groups (every healthy donor and all
+              but one participant with MGUS was shipped, whereas SMM is mixed), that null could
+              in principle be produced by shipment rather than by biology. This panel repeats
+              Figure 3C using only samples documented as shipped, holding shipment constant.
+              The contrasts remain non-significant, so the negative result is not a shipment
+              artifact. Panel A shows the shipment effect itself.
 
-Pipeline:     Load the 32 GSE124310 10x v2 matrices and tag each with its disease group; QC
-              (200-5,000 genes, <15% mitochondrial); normalize, log1p, HVG, scale, PCA; Leiden
-              cluster and assign lineages from canonical markers; take the per-sample mean
-              TNFSF13 in monocytes and dendritic cells, matching the Figure 3C aggregation;
-              compare each disease group with HD.
+Inputs:       H5AD_NORM (scRNAseq_IMPACT_Zenodo.h5ad) for TNFSF13 expression and cell labels;
+              data/metadata/Supplementary_Table_4_scRNAseq_sample_list.csv for Shipment_FedEx
+              and the age and sex covariates.
 
-Statistics:   Two-sided Wilcoxon rank-sum with Benjamini-Hochberg correction across the three
-              contrasts. The public Zavidij release carries no age or sex metadata, so these
-              contrasts are unadjusted.
+Outputs:      figures/SupFig3B.png (and PDF + SVG); tables/SupFig3B_stats.csv.
 
-Inputs:       data/external/zavidij_bm/matrices/ -- one directory per GSE124310 sample, each
-              holding matrix.mtx, genes.tsv and barcodes.tsv. Download the supplementary file
-              of GSE124310 from GEO and extract it there; the directory names carry the sample
-              labels (NBM*, MGUS*, SMMl*, SMMh*, MM*) that set the disease groups.
-
-Outputs:      figures/SupFig3B.png (and PDF + SVG); tables/zavidij_bm_per_sample_summary.csv,
-              tables/zavidij_bm_lineage_counts.csv, tables/zavidij_bm_TNFSF13_stats.csv.
-
-Dependencies: Python + scanpy, pandas, numpy, scipy, statsmodels, matplotlib; reads config.py.
+Dependencies: Python + scanpy, pandas, numpy, statsmodels, matplotlib; reads config.py.
 """
-
-import sys, os, warnings, re
+import sys
+import warnings
 warnings.filterwarnings('ignore')
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -35,221 +28,210 @@ from config import *
 import numpy as np
 import pandas as pd
 import scanpy as sc
-from scipy import io, sparse, stats
+import statsmodels.formula.api as smf
 from statsmodels.stats.multitest import multipletests
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-SAMPLES = DATA_DIR / 'external' / 'zavidij_bm' / 'matrices'
-TABLES_DIR = REPO_DIR / 'tables'
-TABLES_DIR.mkdir(exist_ok=True)
-OUT = TABLES_DIR
+# Every figure in this paper is set in Arial. Register the metrically identical Liberation Sans
+# as a fallback and rewrite the SVG font-family afterwards; svg.fonttype="none" keeps text editable.
+import glob as _glob
+from matplotlib import font_manager as _fm
+FONT = "Arial"
+_av = {f.name for f in _fm.fontManager.ttflist}
+if FONT not in _av:
+    for _p in _glob.glob("/usr/share/fonts/**/LiberationSans-*.ttf", recursive=True):
+        _fm.fontManager.addfont(_p)
+    _av = {f.name for f in _fm.fontManager.ttflist}
+PLOT_FONT = FONT if FONT in _av else ("Liberation Sans" if "Liberation Sans" in _av else "sans-serif")
+plt.rcParams["font.family"] = PLOT_FONT
+plt.rcParams["svg.fonttype"] = "none"
 
-# Disease-group recoder. Zavidij naming: NBM=healthy; MGUS, SMMh (high-risk), SMMl (low-risk), MM.
-def disease_of(name):
-    if name.startswith('NBM'): return 'HD'
-    if name.startswith('MGUS'): return 'MGUS'
-    if name.startswith('SMMh') or name.startswith('SMMl'): return 'SMM'
-    if name.startswith('MM'): return 'MM'
-    return None
 
-# Per-sample subject ID (strip the 138N / 138N45P suffix)
-def subject_of(name):
-    return re.sub(r'\.138N(45P)?$', '', name)
+def save_figure(basename, dpi=300):
+    """Write PNG + PDF + SVG; rewrite the SVG font-family to Arial (see note above)."""
+    for ext in ("png", "pdf", "svg"):
+        out = FIGURES_DIR / f"{basename}.{ext}"
+        plt.savefig(out, dpi=dpi, bbox_inches="tight", facecolor="white")
+        if ext == "svg" and PLOT_FONT != FONT:
+            t = Path(out).read_text(encoding="utf-8")
+            for q in ('"', "'"):
+                t = t.replace(f"font-family: {q}{PLOT_FONT}{q}", f"font-family: {FONT}")
+            t = t.replace(f"font-family: {PLOT_FONT}", f"font-family: {FONT}")
+            Path(out).write_text(t, encoding="utf-8")
+        print(f"Saved: {out.name}")
 
-# Lineage marker dictionary (canonical PBMC + BM)
-LINEAGE_MARKERS = {
-    'Mono': ['CD14', 'LYZ', 'S100A8', 'S100A9', 'VCAN', 'FCN1'],
-    'DC':   ['HLA-DRA', 'CLEC10A', 'CD1C', 'CLEC9A', 'IRF8', 'LILRA4'],
-    'T':    ['CD3D', 'CD3E', 'CD3G', 'TRAC'],
-    'NK':   ['NKG7', 'GNLY', 'KLRF1', 'KLRD1'],
-    'B':    ['CD79A', 'MS4A1', 'CD19', 'CD79B'],
-    'Eryth':['HBB', 'HBA1', 'HBA2'],
-}
 
-def load_sample(d):
-    """Return AnnData for a single sample directory containing matrix.mtx, genes.tsv, barcodes.tsv."""
-    X = io.mmread(str(d / 'matrix.mtx')).T.tocsr().astype(np.float32)
-    genes = pd.read_csv(d / 'genes.tsv', sep='\t', header=None, names=['ensembl', 'symbol'])
-    barcodes = pd.read_csv(d / 'barcodes.tsv', sep='\t', header=None, names=['barcode'])
-    # Collapse duplicate symbols -> sum (deterministic; matches scanpy convention)
-    if genes['symbol'].duplicated().any():
-        # find dup symbols and sum their columns
-        dup_mask = genes['symbol'].duplicated(keep=False)
-        if dup_mask.any():
-            # rare; for our purposes, take the first per symbol
-            keep = ~genes['symbol'].duplicated(keep='first')
-            X = X[:, keep.values]
-            genes = genes[keep].reset_index(drop=True)
-    a = sc.AnnData(X=X, obs=barcodes, var=genes)
-    a.var.index = a.var['symbol'].astype(str)
-    a.var_names_make_unique()
-    a.obs.index = a.obs['barcode'].astype(str) + ('_' + d.name)
-    a.obs['sample'] = d.name
-    a.obs['subject'] = subject_of(d.name)
-    a.obs['Disease'] = disease_of(d.name)
-    return a
+APRIL_GENE = 'TNFSF13'
+DISEASE_GROUPS = ['HD', 'MGUS', 'SMM']
+PLOT_GROUPS = ['HD', 'MGUS', 'SMM (Untreated)', 'SMM (Treated)']
+RNG_SEED = 2026
+# Shipment is read from Supplementary Table 4: 1 shipped, 0 not shipped. A blank field is EXCLUDED
+# rather than assumed shipped, so a sample with no record never enters the shipped-only analysis.
+SHIP_MAP = {1.0: 'Shipped', 0.0: 'Not shipped'}
+
+
+def per_patient_expression():
+    """Per-participant mean myeloid TNFSF13, using the cell selection of 02_Figure3C.py."""
+    adata = sc.read_h5ad(H5AD_NORM, backed='r')
+    april_idx = list(adata.var_names).index(APRIL_GENE)
+    cells = pd.DataFrame({
+        'Annotation_Level_1': adata.obs['Annotation_Level_1'].astype(str).values,
+        'l2': adata.obs['Annotation_Level_2'].astype(str).values,
+        'diagnosis': adata.obs['Diagnosis'].astype(str).values,
+        'tp_raw': adata.obs['Timepoint'].astype(str).values,
+        'treat': adata.obs['TreatmentStatus'].astype(str).values,
+        'patient': adata.obs['Deidentified_Patient_ID'].astype(str).values,
+    })
+    cells['pos'] = np.arange(len(cells))
+    tp_map = {'Pre-Vx': 'Pre-Vx', 'Post-2nd': 'Post-Vx'}
+    clean = (~cells['l2'].isin(['QC_removed', 'CLL'])) & (~cells['l2'].str.startswith('db:'))
+    keep = (clean
+            & cells['Annotation_Level_1'].isin(['Mono', 'DC'])
+            & cells['tp_raw'].isin(tp_map.keys())
+            & cells['diagnosis'].isin(DISEASE_GROUPS))
+    myeloid = cells[keep].copy()
+    myeloid['Timepoint'] = myeloid['tp_raw'].map(tp_map)
+    myeloid['group'] = np.where(
+        myeloid['diagnosis'] != 'SMM', myeloid['diagnosis'],
+        np.where(myeloid['treat'] == 'Never_treated', 'SMM (Untreated)', 'SMM (Treated)'))
+    positions = myeloid['pos'].to_numpy()
+    expr = []
+    for i in range(0, len(positions), 100000):
+        chunk = adata.X[list(positions[i:i + 100000]), april_idx]
+        chunk = chunk.toarray().flatten() if hasattr(chunk, 'toarray') else np.asarray(chunk).flatten()
+        expr.extend(chunk)
+    myeloid['APRIL_expr'] = expr
+    return myeloid.groupby(['patient', 'group', 'Timepoint'])['APRIL_expr'].mean().reset_index()
+
+
+def contrasts(pat, label):
+    """Figure 3C's test: age- and sex-adjusted rank ANCOVA vs HD, BH across the six contrasts."""
+    rows = []
+    for tp in ['Pre-Vx', 'Post-Vx']:
+        t = pat[pat['Timepoint'] == tp].dropna(subset=['Age', 'Sex']).copy()
+        t['rk'] = t['APRIL_expr'].rank()
+        t['group'] = pd.Categorical(t['group'], categories=PLOT_GROUPS)
+        fit = smf.ols('rk ~ C(group, Treatment(reference="HD")) + Age + C(Sex)', data=t).fit()
+        for g in PLOT_GROUPS[1:]:
+            rows.append(dict(cohort=label, Timepoint=tp, Comparison=f'HD vs {g}',
+                             n_HD=int((t['group'] == 'HD').sum()), n=int((t['group'] == g).sum()),
+                             p=float(fit.pvalues[f'C(group, Treatment(reference="HD"))[T.{g}]'])))
+    out = pd.DataFrame(rows)
+    out['q'] = multipletests(out['p'], method='fdr_bh')[1]
+    return out
+
+
+def attach_metadata(pat):
+    """Join shipment status and the age and sex covariates from Supplementary Table 4."""
+    meta_path = DATA_DIR / "metadata" / "Supplementary_Table_4_scRNAseq_sample_list.csv"
+    if not meta_path.exists():
+        meta_path = REPO_DIR.parent / "Supplementary_Tables" / "Supplementary_Table_4_scRNAseq_sample_list.csv"
+    meta = pd.read_csv(meta_path)
+    meta['tp'] = meta['Timepoint'].map({'Pre-Vx': 'Pre-Vx', 'Post-2nd': 'Post-Vx'})
+    ship = (meta[meta['tp'].notna()]
+            .groupby(['Deidentified_Patient_ID', 'tp'])['Shipment_FedEx']
+            .agg(lambda s: s.dropna().unique().tolist()).reset_index())
+    assert (ship['Shipment_FedEx'].map(len) <= 1).all(), "conflicting shipment records"
+    ship['Shipping'] = ship['Shipment_FedEx'].map(lambda v: SHIP_MAP.get(v[0]) if len(v) == 1 else None)
+    ship = ship.rename(columns={'Deidentified_Patient_ID': 'patient', 'tp': 'Timepoint'})
+    pat = pat.merge(ship[['patient', 'Timepoint', 'Shipping']], on=['patient', 'Timepoint'], how='left')
+
+    cov = (meta.groupby('Deidentified_Patient_ID')
+                .agg(Age=('Age', 'median'),
+                     Sex=('Sex', lambda s: s.dropna().mode().iloc[0] if s.dropna().size else None))
+                .reset_index().rename(columns={'Deidentified_Patient_ID': 'patient'}))
+    return pat.merge(cov, on='patient', how='left')
+
 
 def main():
-    if not SAMPLES.is_dir():
-        raise SystemExit(
-            f"GSE124310 sample matrices not found at {SAMPLES}.\n"
-            "Download the GSE124310 supplementary file from GEO and extract it there, one "
-            "directory per sample containing matrix.mtx, genes.tsv and barcodes.tsv.")
-    sample_dirs = sorted([p for p in SAMPLES.iterdir() if p.is_dir()])
-    print(f"Loading {len(sample_dirs)} samples...")
-    adatas = []
-    for d in sample_dirs:
-        a = load_sample(d)
-        adatas.append(a)
-        print(f"  {d.name}: {a.n_obs} cells x {a.n_vars} genes  ({a.obs['Disease'].iloc[0]})")
-    adata = sc.concat(adatas, axis=0, join='inner', merge='same')
-    print(f"\nConcatenated: {adata.n_obs} cells x {adata.n_vars} genes")
-    print(adata.obs.groupby('Disease')['sample'].nunique())
+    pat = attach_metadata(per_patient_expression())
 
-    # QC
-    adata.var['mt'] = adata.var_names.str.startswith('MT-')
-    sc.pp.calculate_qc_metrics(adata, qc_vars=['mt'], percent_top=None, log1p=False, inplace=True)
-    pre = adata.n_obs
-    adata = adata[(adata.obs['n_genes_by_counts'] >= 200) &
-                  (adata.obs['n_genes_by_counts'] <= 5000) &
-                  (adata.obs['pct_counts_mt'] < 15)].copy()
-    print(f"QC: {pre} -> {adata.n_obs} cells kept")
+    shipped = pat[pat['Shipping'] == 'Shipped'].copy()
+    print(f"Participant-timepoints: {len(pat)} in total, {len(shipped)} documented as shipped, "
+          f"{int(pat['Shipping'].isna().sum())} with no record (excluded)")
+    print("\nShipment by group (participant-timepoints):")
+    print(pat.groupby(['group', 'Timepoint'])['Shipping'].value_counts(dropna=False)
+             .unstack(fill_value=0).to_string())
 
-    # Save raw counts; normalize+log1p; STORE log-norm BEFORE scaling so per-sample TNFSF13
-    # is computed on the same scale used in Fig 3C (Mann-Whitney/ANCOVA on log-normalized
-    # mean per patient). Scaling is for clustering/PCA only.
-    adata.layers['counts'] = adata.X.copy()
-    sc.pp.normalize_total(adata, target_sum=1e4)
-    sc.pp.log1p(adata)
-    adata.layers['lognorm'] = adata.X.copy()
+    # Gate: the full-cohort run must reproduce the published Figure 3C before the restricted
+    # run means anything. Figure 3C reports all six contrasts non-significant.
+    full = contrasts(pat, 'all samples')
+    print("\nFull cohort (reproduces Figure 3C):")
+    print(full.round(4).to_string(index=False))
+    assert full['q'].min() > 0.1, "full-cohort run does not reproduce the published null"
 
-    # HVG + scale + PCA
-    sc.pp.highly_variable_genes(adata, n_top_genes=2000, flavor='seurat')
-    sc.pp.scale(adata, max_value=10)
-    sc.tl.pca(adata, n_comps=30, use_highly_variable=True)
-    sc.pp.neighbors(adata, n_neighbors=15, n_pcs=30)
-    sc.tl.leiden(adata, resolution=0.6)
-    print(f"Leiden clusters: {adata.obs['leiden'].nunique()}")
+    rest = contrasts(shipped, 'shipped only')
+    print("\nShipped samples only:")
+    print(rest.round(4).to_string(index=False))
+    print(f"\nminimum q, all samples {full['q'].min():.3f} | shipped only {rest['q'].min():.3f}")
 
-    # Score lineages: per-cluster mean of marker-gene log-normalized expression
-    # Use score_genes per lineage; assign each cluster the lineage with the highest median score.
-    for lin, markers in LINEAGE_MARKERS.items():
-        present = [g for g in markers if g in adata.var_names]
-        sc.tl.score_genes(adata, gene_list=present, score_name=f'score_{lin}', use_raw=False)
-    cluster_scores = (adata.obs.groupby('leiden')[[f'score_{lin}' for lin in LINEAGE_MARKERS]]
-                      .median().reset_index())
-    cluster_to_lineage = {}
-    for _, r in cluster_scores.iterrows():
-        best = max(LINEAGE_MARKERS.keys(),
-                   key=lambda lin: r[f'score_{lin}'])
-        cluster_to_lineage[r['leiden']] = best
-    adata.obs['lineage'] = adata.obs['leiden'].map(cluster_to_lineage)
-    print(adata.obs.groupby(['Disease', 'lineage']).size().unstack(fill_value=0))
+    tables_dir = REPO_DIR / "tables"
+    tables_dir.mkdir(exist_ok=True)
+    pd.concat([full, rest], ignore_index=True).to_csv(tables_dir / "SupFig3B_stats.csv", index=False)
 
-    # Save lineage counts
-    counts = (adata.obs.groupby(['sample', 'Disease', 'lineage']).size()
-                       .reset_index(name='n_cells'))
-    counts.to_csv(OUT / 'zavidij_bm_lineage_counts.csv', index=False)
-    print("Saved lineage counts.")
+    # --- plot: Figure 3C's layout and styling, on shipped samples only ----------------------
+    diag_colors = {'HD': '#3498db', 'MGUS': '#f1c40f',
+                   'SMM (Untreated)': '#e74c3c', 'SMM (Treated)': '#A93226'}
+    rng = np.random.default_rng(RNG_SEED)
+    fig, axes = plt.subplots(1, 2, figsize=(9, 3.4), sharey=True)
+    plt.subplots_adjust(wspace=0.12)
+    # y-limit is taken from the FULL cohort so this panel is on the same scale as Figure 3C.
+    ymax_all = pat['APRIL_expr'].max()
 
-    # Per-sample mean TNFSF13 in Mono+DC (myeloid)
-    myeloid_mask = adata.obs['lineage'].isin(['Mono', 'DC'])
-    print(f"Myeloid cells: {myeloid_mask.sum()} / {adata.n_obs}")
-    if 'TNFSF13' not in adata.var_names:
-        sys.exit("!! TNFSF13 not in gene list after concat")
-    april_idx = list(adata.var_names).index('TNFSF13')
-    # Use log-normalized layer (NOT the scaled adata.X) for per-cell TNFSF13. This matches the
-    # Fig 3C aggregation rule (mean per-patient on log(normalized counts + 1)).
-    L = adata.layers['lognorm']
-    expr_col = L[:, april_idx]
-    expr = np.asarray(expr_col).flatten() if not sparse.issparse(L) \
-           else np.asarray(expr_col.todense()).flatten()
-    adata.obs['TNFSF13'] = expr
+    for ax_idx, (ax, tp) in enumerate(zip(axes, ['Pre-Vx', 'Post-Vx'])):
+        tp_data = shipped[shipped['Timepoint'] == tp]
+        box_data = [tp_data.loc[tp_data['group'] == g, 'APRIL_expr'].values for g in PLOT_GROUPS]
+        bp = ax.boxplot(box_data, positions=range(len(PLOT_GROUPS)), widths=0.65,
+                        patch_artist=True, showfliers=False)
+        for patch, diag in zip(bp['boxes'], PLOT_GROUPS):
+            patch.set_facecolor(diag_colors[diag])
+            patch.set_alpha(0.7)
+        for element in ['whiskers', 'caps', 'medians']:
+            plt.setp(bp[element], color='black', linewidth=1.2)
+        for i, (data, diag) in enumerate(zip(box_data, PLOT_GROUPS)):
+            ax.scatter(rng.normal(i, 0.1, size=len(data)), data, alpha=0.6, color=diag_colors[diag],
+                       edgecolor='white', s=45, zorder=3, linewidth=0.5)
 
-    # Aggregate per sample, restricted to myeloid
-    myeloid = adata.obs[myeloid_mask].copy()
-    per_sample = (myeloid.groupby(['sample', 'Disease'])
-                          .agg(mean_TNFSF13=('TNFSF13', 'mean'),
-                               n_myeloid=('TNFSF13', 'size'),
-                               pct_TNFSF13_pos=('TNFSF13', lambda v: float((v > 0).mean()*100)))
-                          .reset_index())
-    per_sample.to_csv(OUT / 'zavidij_bm_per_sample_summary.csv', index=False)
-    print("\nPer-sample summary (myeloid):")
-    print(per_sample.to_string(index=False))
+        # Both p and q are printed. Benjamini-Hochberg is a step-up procedure, so the largest
+        # p in the family sets a ceiling that every smaller q inherits: here all six q values
+        # equal 0.9998. Printing q alone would show six identical numbers and hide the fact that
+        # six different tests ran, and rounding 0.9998 to "1.00" would claim a precision the
+        # value does not have, so a q at or above 0.995 is reported as ">0.99".
+        def _one(sym, v):
+            # A value of 0.9998 must not be printed as "1.00": that claims a precision it does
+            # not have and reads as a placeholder. Anything that would round to 1.00 is reported
+            # as ">0.99" instead.
+            if v >= 0.995:
+                return f'{sym}>0.99'
+            return f'{sym}={v:.2f}' if v >= 0.01 else f'{sym}={v:.3f}'
+        def _fmt(pv, qv):
+            return f'{_one("p", pv)}, {_one("q", qv)}'
+        for _j, _grp in enumerate(PLOT_GROUPS[1:], start=1):
+            _row = rest[(rest['Timepoint'] == tp) & (rest['Comparison'] == f'HD vs {_grp}')].iloc[0]
+            _y = ymax_all + 0.08 + 0.15 * (_j - 1)
+            ax.plot([0, _j], [_y, _y], 'k-', linewidth=1)
+            ax.text(_j / 2, _y + 0.02, _fmt(_row['p'], _row['q']), ha='center', va='bottom', fontsize=9.5)
 
-    # Stats
-    DISEASES = ['HD', 'MGUS', 'SMM', 'MM']
-    by_d = {d: per_sample[per_sample['Disease'] == d]['mean_TNFSF13'].values for d in DISEASES}
-    rows = []
-    for d in ['MGUS', 'SMM', 'MM']:
-        hd_vals = by_d['HD']; comp = by_d[d]
-        if len(comp) == 0:
-            rows.append({'cmp': f'HD vs {d}', 'n_HD': len(hd_vals), 'n': 0, 'mean_HD': np.nan,
-                         'mean_other': np.nan, 'p': np.nan}); continue
-        p = float(stats.mannwhitneyu(hd_vals, comp, alternative='two-sided').pvalue)
-        rows.append({'cmp': f'HD vs {d}', 'n_HD': len(hd_vals), 'n': len(comp),
-                     'mean_HD': float(hd_vals.mean()), 'mean_other': float(comp.mean()),
-                     'p': p})
-    pvals = [r['p'] for r in rows if not np.isnan(r['p'])]
-    qvals = list(multipletests(pvals, method='fdr_bh')[1]) if pvals else []
-    j = 0
-    for r in rows:
-        if not np.isnan(r['p']):
-            r['q_BH'] = qvals[j]; j += 1
-        else:
-            r['q_BH'] = np.nan
-    print("\nStats (MWU + BH across HD-vs-each-group):")
-    for r in rows:
-        print(f"  {r['cmp']}: n_HD={r['n_HD']} n_other={r['n']} mean_HD={r['mean_HD']:.3f} "
-              f"mean_other={r['mean_other']:.3f} p={r['p']:.4g} q_BH={r['q_BH']:.4g}")
-    pd.DataFrame(rows).to_csv(OUT / 'zavidij_bm_TNFSF13_stats.csv', index=False)
+        ax.set_title(tp, fontsize=14, fontweight='bold', pad=6)
+        ax.set_xticks(range(len(PLOT_GROUPS)))
+        _disp = {'SMM (Untreated)': 'SMM\nUntreated', 'SMM (Treated)': 'SMM\nTreated'}
+        ax.set_xticklabels([f'{_disp.get(d, d)}\n(n={len(v)})' for d, v in zip(PLOT_GROUPS, box_data)],
+                           fontsize=9.5)
+        ax.tick_params(axis='y', labelsize=11)
+        if ax_idx == 0:
+            ax.set_ylabel('APRIL Expression\n[log$_2$(CPM+1)]', fontsize=12, fontweight='bold')
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.set_xlim(-0.5, len(PLOT_GROUPS) - 0.5)
+        ax.set_ylim(0, ymax_all + 0.70)
 
-    # Figure: tighter layout for a supplementary panel; matches Fig 3C palette
-    diag_colors = {'HD': '#3498db', 'MGUS': '#f1c40f', 'SMM': '#e74c3c', 'MM': '#16a085'}
-    fig, ax = plt.subplots(figsize=(5.0, 3.6))
-    data = [by_d[d] for d in DISEASES]
-    bp = ax.boxplot(data, positions=range(len(DISEASES)), widths=0.6,
-                    patch_artist=True, showfliers=False)
-    for patch, d in zip(bp['boxes'], DISEASES):
-        patch.set_facecolor(diag_colors[d]); patch.set_alpha(0.7)
-    for el in ['whiskers', 'caps', 'medians']:
-        plt.setp(bp[el], color='black', linewidth=1.2)
-    for i, (d, vals) in enumerate(zip(DISEASES, data)):
-        x = np.linspace(i - 0.12, i + 0.12, max(len(vals), 1))
-        ax.scatter(x[:len(vals)], vals, color=diag_colors[d], edgecolor='white',
-                   s=48, alpha=0.85, zorder=3, linewidth=0.6)
-
-    # Brackets HD vs MGUS / HD vs SMM / HD vs MM, stacked cleanly with adaptive spacing
-    ymax = max([v.max() for v in data if len(v) > 0])
-    stat_df = pd.DataFrame(rows)
-    bracket_order = {'MGUS': 1, 'SMM': 2, 'MM': 3}
-    step = max(ymax * 0.18, 0.0025)
-    for _, r in stat_df.iterrows():
-        g2 = r['cmp'].split(' vs ')[1]; pos = bracket_order[g2]
-        y = ymax + step + (pos - 1) * step
-        x2 = DISEASES.index(g2)
-        ax.plot([0, x2], [y, y], 'k-', lw=1.0)
-        ax.plot([0, 0], [y - step * 0.18, y], 'k-', lw=1.0)
-        ax.plot([x2, x2], [y - step * 0.18, y], 'k-', lw=1.0)
-        qv = r['q_BH']
-        lbl = f'q={qv:.2f}' if qv >= 0.01 else f'q={qv:.3f}'
-        ax.text((0 + x2) / 2.0, y + step * 0.10, lbl, ha='center', va='bottom', fontsize=9)
-
-    ax.set_xticks(range(len(DISEASES)))
-    ax.set_xticklabels([f'{d}\n(n={len(by_d[d])})' for d in DISEASES], fontsize=11)
-    ax.set_ylabel('Mean TNFSF13 (APRIL) expression\nin BM myeloid cells [log-norm]',
-                  fontsize=10, fontweight='bold')
-    ax.set_title('BM myeloid APRIL (Zavidij GSE124310)', fontsize=11, fontweight='bold')
-    ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
-    # y-axis: pad above the highest bracket
-    ax.set_ylim(-0.001, ymax + 4 * step)
+    plt.suptitle('APRIL Expression (Myeloid Cells), shipped samples only',
+                 fontsize=14, fontweight='bold', y=0.98)
     plt.tight_layout()
-    out_png = FIGURES_DIR / 'SupFig3B.png'
-    plt.savefig(out_png, dpi=300, bbox_inches='tight', facecolor='white')
-    plt.savefig(out_png.with_suffix('.pdf'), bbox_inches='tight', facecolor='white')
-    plt.savefig(out_png.with_suffix('.svg'), bbox_inches='tight', facecolor='white')
-    plt.close()
-    print(f"\nSaved: {out_png} (+ .pdf, .svg)")
+    save_figure("SupFig3B")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
