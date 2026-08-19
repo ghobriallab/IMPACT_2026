@@ -191,13 +191,25 @@ def main():
             ax.scatter(rng.normal(i, 0.1, size=len(data)), data, alpha=0.6, color=diag_colors[diag],
                        edgecolor='white', s=45, zorder=3, linewidth=0.5)
 
-        def _fmt_q(q):
-            return f'q={q:.2f}' if q >= 0.01 else f'q={q:.3f}'
+        # Both p and q are printed. Benjamini-Hochberg is a step-up procedure, so the largest
+        # p in the family sets a ceiling that every smaller q inherits: here all six q values
+        # equal 0.9998. Printing q alone would show six identical numbers and hide the fact that
+        # six different tests ran, and rounding 0.9998 to "1.00" would claim a precision the
+        # value does not have, so a q at or above 0.995 is reported as ">0.99".
+        def _one(sym, v):
+            # A value of 0.9998 must not be printed as "1.00": that claims a precision it does
+            # not have and reads as a placeholder. Anything that would round to 1.00 is reported
+            # as ">0.99" instead.
+            if v >= 0.995:
+                return f'{sym}>0.99'
+            return f'{sym}={v:.2f}' if v >= 0.01 else f'{sym}={v:.3f}'
+        def _fmt(pv, qv):
+            return f'{_one("p", pv)}, {_one("q", qv)}'
         for _j, _grp in enumerate(PLOT_GROUPS[1:], start=1):
             _row = rest[(rest['Timepoint'] == tp) & (rest['Comparison'] == f'HD vs {_grp}')].iloc[0]
-            _y = ymax_all + 0.08 + 0.14 * (_j - 1)
+            _y = ymax_all + 0.08 + 0.15 * (_j - 1)
             ax.plot([0, _j], [_y, _y], 'k-', linewidth=1)
-            ax.text(_j / 2, _y + 0.02, _fmt_q(_row['q']), ha='center', va='bottom', fontsize=10)
+            ax.text(_j / 2, _y + 0.02, _fmt(_row['p'], _row['q']), ha='center', va='bottom', fontsize=9.5)
 
         ax.set_title(tp, fontsize=14, fontweight='bold', pad=6)
         ax.set_xticks(range(len(PLOT_GROUPS)))
@@ -210,7 +222,7 @@ def main():
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
         ax.set_xlim(-0.5, len(PLOT_GROUPS) - 0.5)
-        ax.set_ylim(0, ymax_all + 0.65)
+        ax.set_ylim(0, ymax_all + 0.70)
 
     plt.suptitle('APRIL Expression (Myeloid Cells), shipped samples only',
                  fontsize=14, fontweight='bold', y=0.98)
