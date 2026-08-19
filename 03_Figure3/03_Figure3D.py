@@ -44,7 +44,11 @@ mpl.rcParams['mathtext.fontset'] = 'dejavusans'
 
 MIN_CELLS = 10                     # non-malignant plasma cells per sample, as in Figure 3E
 ORDER = ['NBM', 'MGUS', 'SMM', 'NDMM']
-SHADES = {'NBM': '#4DBBD5', 'MGUS': '#F39B7F', 'SMM': '#E64B35', 'NDMM': '#3C5488'}
+# Palette matched to Figure 3C (its diag_colors) and to Supplementary Figure 4B, so the same
+# disease stage is the same colour wherever it appears. NBM takes the HD blue, since it is
+# the healthy reference of this cohort. NDMM is brown, one step darker along the progression
+# axis and distinct from the SMM red.
+SHADES = {'NBM': '#3498db', 'MGUS': '#f1c40f', 'SMM': '#e74c3c', 'NDMM': '#8B4513'}
 COMPS = [('BM', 'Bone marrow'), ('PB', 'Peripheral blood')]
 RNG_SEED = 42
 
