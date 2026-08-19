@@ -1,31 +1,37 @@
-# Figure 4 — T cell responses
-
-Code to reproduce Figure 4.
+# Figure 4: T cell responses
 
 | Panel | Script | Description |
 |-------|--------|-------------|
-| 4B | `Figure4B.R` | SARS-CoV-2 spike-specific TCR clonotype proportions, paired pre vs post (HD/MGUS/SMM) |
-| 4C | `Figure4C.R` | CEF (CMV/EBV/Flu) recall TCR clonotype proportions, paired pre vs post (control for recall vs de novo) |
-| 4E | `Figure4E.R` | IFN-gamma ELISPOT for SARS spike and CEF pools, HD vs SMM, age+sex adjusted |
+| 4B | `01_Figure4B.R` | Spike-specific TCR clonotype proportions, paired pre vs post |
+| 4C | `02_Figure4C.R` | CEF (CMV / EBV / influenza) recall clonotype proportions, the recall control for 4B |
+| 4E | `03_Figure4E.R` | IFN-gamma ELISPOT for spike and CERI pools, HD vs SMM |
 
-## Statistical framework
+Clonotypes are called against the curated spike- and CEF-specific reference panels listed in
+the Supplementary Tables.
 
-Paired pre vs post within group: Wilcoxon signed-rank. Cross-group differences: age- and sex-adjusted rank-based ANCOVA (panel 4E) and Mann–Whitney with BH correction (panels 4B/4C). ELISPOT values are DMSO-normalized and technical-duplicate-averaged before group comparison.
+## Statistics
 
-The TCR clonotype data are computed against curated spike-specific and CEF-specific TCR reference panels (panel of curated reference TCRs deposited in the Supplementary Tables).
+Panels 4B and 4C compare pre with post within each group using a two-sided paired Wilcoxon
+signed-rank test, Benjamini-Hochberg corrected across the groups of the panel. Panel 4E compares
+HD with SMM using age- and sex-adjusted rank-based ANCOVA, run separately for each peptide pool;
+counts are DMSO-normalized and averaged over technical duplicates first. Significance threshold
+q (or p) < 0.1.
 
 ## Inputs
 
-- `data/tcr/tcr_clonotype_proportions.rds` — per-patient ClusTCR proportions, pre and post vaccination (panels 4B/4C).
-- `data/elisa/elispot_spike_cef.csv` — well-level ELISPOT counts (panel 4E).
+| File | Panels |
+|------|--------|
+| `data/tcr/tcr_clonotype_proportions.rds` | 4B, 4C |
+| `data/elisa/elispot_spike_cef.csv` | 4E |
 
-All inputs are hosted on Zenodo (DOI [10.5281/zenodo.18989222](https://doi.org/10.5281/zenodo.18989222)). If you mirror to an internal Google Cloud Storage bucket, `gsutil cp -r gs://your-bucket/impact_data/tcr data/` and `gsutil cp -r gs://your-bucket/impact_data/elisa data/` reproduce the expected layout.
+All inputs come from the Zenodo deposit (DOI [10.5281/zenodo.18989222](https://doi.org/10.5281/zenodo.18989222));
+see the root README for the expected `data/` layout.
 
 ## Run
 
 ```bash
-cd Figure4
-Rscript Figure4B.R
-Rscript Figure4C.R
-Rscript Figure4E.R
+cd 04_Figure4
+Rscript 01_Figure4B.R    # writes ../figures/Figure4B.{png,pdf,svg}
+Rscript 02_Figure4C.R
+Rscript 03_Figure4E.R
 ```

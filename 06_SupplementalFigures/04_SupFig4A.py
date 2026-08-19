@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""Supplementary Figure 4A: APRIL-responsive gene signature validation (GSE205101/GSE173644).
+"""Supplementary Figure 4A: validation of the APRIL-responsive gene signature (GSE173644).
 
-Purpose:      Supplementary Figure 4: external validation of the APRIL-responsive gene signature in independent B-cell scRNA-seq cohorts (GSE205101 / GSE173644 in-vitro APRIL time course). Score the same 15-gene module and compare APRIL-treated vs untreated.
+Purpose:      External validation of the 15-gene APRIL-responsive module in an in-vitro APRIL
+              stimulation time course of human B cells (Stephenson et al., J Immunol 2022),
+              scoring the same module and comparing APRIL-treated with untreated cells.
 
-Inputs:       External GSE205101 / GSE173644 in-vitro APRIL stimulation matrices (downloaded into data/external/).
+Inputs:       data/external/GSE173644_timecourse.txt.gz, which ships in the Zenodo deposit.
 
-Outputs:      figures/SupFig4A.png (signature-score boxes by condition).
+Outputs:      figures/SupFig4A.png, signature-score boxes by condition.
 
 Dependencies: Python + pandas, numpy, matplotlib, seaborn, scipy, statsmodels; reads config.py.
 """

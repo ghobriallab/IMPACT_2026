@@ -293,10 +293,9 @@ def main():
     })
     cell_df = cell_df[cell_df['Timepoint_Clean'].notna()].copy()
 
-    # Restrict to healthy immune cells (myeloid + lymphoid). EXCLUDE_CELLTYPES and
-    # should_exclude_celltype() were declared from the outset but never applied, so scores were
-    # previously averaged over every barcode in the object, including QC-failed cells, doublets,
-    # platelets (not immune) and CLL (excluded paper-wide). This applies the documented filter.
+    # Restrict to healthy immune cells (myeloid + lymphoid) via EXCLUDE_CELLTYPES. The deposited
+    # object retains QC-failed cells, doublets, platelets (not immune) and CLL (excluded
+    # paper-wide) under explicit labels, so the filter has to be applied here.
     n_before = len(cell_df)
     keep = ~cell_df['Annotation_Level_2'].map(should_exclude_celltype)
     dropped = cell_df.loc[~keep, 'Annotation_Level_2'].value_counts()

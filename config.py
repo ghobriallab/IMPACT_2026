@@ -1,4 +1,4 @@
-"""IMPACT — Configuration. Edit these paths to match your local environment.
+"""IMPACT configuration. Edit these paths to match your local environment.
 
 Purpose:      Shared configuration for Python figure scripts: paths to the de-identified scRNA-seq h5ad files, data and figures directories, and the manuscript color palette.
 

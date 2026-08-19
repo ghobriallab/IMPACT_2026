@@ -1,58 +1,50 @@
 #!/usr/bin/env python3
 # ============================================================================
 # Purpose:      Build Supplementary Table 1, the demographic and clinical
-#               characteristics of the ELISA serological cohort (n=731) by
-#               disease group, with a test of whether each characteristic
-#               differs between each disease group and healthy donors.
-#
-#               Reviewers asked to see not only the distribution of each
-#               characteristic but whether it differs by disease stage. HD is
-#               the reference group for every cross-sectional comparison in the
-#               paper, so each disease group is tested against HD rather than
-#               all-versus-all.
-#
-#               Every categorical variable lists all of its levels, so the
-#               counts in each column sum to that group's n. Age additionally
-#               reports how many participants have a date of birth on record.
-#
-#               Tests, also named per variable in the "Statistical test" column:
-#                 continuous   Two-sided Wilcoxon rank-sum test, equivalently
-#                              the Mann-Whitney U test (scipy.stats.mannwhitneyu,
-#                              alternative="two-sided"). This is the UNPAIRED
-#                              test: the groups are different individuals. It is
-#                              NOT the Wilcoxon signed-rank test, which is the
-#                              paired version used elsewhere in this study for
-#                              pre versus post vaccination comparisons within
-#                              the same participants. With ties present at these
-#                              sample sizes scipy uses the normal approximation
-#                              with continuity and tie corrections.
-#                 categorical  Fisher's exact test on the 2x2 table, two-sided,
-#                              conditional on the margins. Race is tested as
-#                              White versus all other categories combined.
-#
-#               MULTIPLE TESTING: each characteristic is tested three times,
-#               once per disease group against HD, so the reported values are
-#               Benjamini-Hochberg q-values computed within each characteristic
-#               across those three comparisons. Cells reaching q<0.1, the
-#               significance threshold used throughout this study, are printed
-#               in red, matching the caption.
-#
-#               All 731 participants received a second mRNA dose, so age at the
-#               second dose is defined cohort-wide; the participants whose
-#               sample was drawn between the first and second dose still have a
-#               recorded second-dose date. Age is missing only where date of
-#               birth was unavailable, reported as "Unknown".
-#
-#               IgM-MGUS participants are reported within MGUS here to match
-#               the grouping used in Figure 1; they are kept separate in
-#               Figure 5C, which follows the published cohort definition.
-#
-# Inputs:       data/elisa/elisa_cohort_demographics.csv
-#                 one de-identified row per participant. Age is age at the
-#                 second vaccine dose, floored at 18 and capped at 90 per HIPAA
-#                 safe harbour, so the maximum printed age is 90.
+#               characteristics of the serological cohort (n=731) by disease
+#               group, with a test of whether each characteristic differs
+#               between each disease group and healthy donors.
+# Inputs:       data/elisa/elisa_cohort_demographics.csv, one de-identified row
+#               per participant. Age is age at the second vaccine dose, floored
+#               at 18 and capped at 90 per HIPAA safe harbour, so the maximum
+#               printed age is 90.
 # Outputs:      tables/Supplementary_Table_1_Demographics.xlsx
 # Dependencies: python3 + pandas, numpy, scipy, statsmodels, openpyxl.
+#
+# Notes
+#   Groups        HD is the reference group for every cross-sectional
+#                 comparison in the paper, so each disease group is tested
+#                 against HD rather than all-versus-all. Every categorical
+#                 variable lists all of its levels, so the counts in each
+#                 column sum to that group's n. IgM-MGUS participants are
+#                 reported within MGUS to match the grouping used in Figure 1;
+#                 they are kept separate in Figure 5C, which follows the
+#                 published cohort definition.
+#
+#   Tests         Named per variable in the "Statistical test" column.
+#                 Continuous variables use the two-sided Wilcoxon rank-sum
+#                 test, equivalently Mann-Whitney U (scipy.stats.mannwhitneyu,
+#                 alternative="two-sided"). This is the UNPAIRED test, since
+#                 the groups are different individuals; it is not the Wilcoxon
+#                 signed-rank test used elsewhere in this study for pre versus
+#                 post comparisons within the same participants. With ties at
+#                 these sample sizes scipy uses the normal approximation with
+#                 continuity and tie corrections. Categorical variables use
+#                 Fisher's exact test on the 2x2 table, two-sided, conditional
+#                 on the margins; race is tested as White versus all other
+#                 categories combined.
+#
+#   Correction    Each characteristic is tested three times, once per disease
+#                 group against HD, so the reported values are Benjamini-
+#                 Hochberg q-values computed within each characteristic across
+#                 those three comparisons. Cells reaching q<0.1 are printed in
+#                 red, matching the caption.
+#
+#   Age coverage  All 731 participants received a second mRNA dose, so age at
+#                 the second dose is defined cohort-wide; participants sampled
+#                 between the first and second dose still have a recorded
+#                 second-dose date. Age is missing only where date of birth was
+#                 unavailable, reported as "Unknown".
 # ============================================================================
 from pathlib import Path
 import numpy as np

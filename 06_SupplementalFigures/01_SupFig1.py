@@ -129,7 +129,7 @@ def draw_bracket(ax, x1, x2, y, label, tip_frac=0.012, fontsize=7.2, linewidth=0
             fontsize=fontsize, clip_on=False)
 
 # ============================================================
-# Tier panels A/B/C — Fig 1B / 1C / 1F (ALL risk-classed SMM, treatment annotated)
+# Tier panels A/B/C, the Figure 1B / 1C / 1F equivalents (all risk-classed SMM, treatment annotated)
 # ============================================================
 b = make_panel_df(ELISA_2ND, 14, 60,    'Days_post2nd')
 c = make_panel_df(ELISA_2ND, 60.0001, 120, 'Days_post2nd')
@@ -153,7 +153,7 @@ tier_results = [
 ]
 
 # ============================================================
-# FIGURE — 1 row × 3 cols
+# Figure: 1 row x 3 cols
 # ============================================================
 fig = plt.figure(figsize=(15.0, 6.5))
 gs = fig.add_gridspec(1, 3, hspace=0.30, wspace=0.28,
@@ -208,7 +208,7 @@ for lbl, spec in [('A', gs[0,0]),('B', gs[0,1]),('C', gs[0,2])]:
 fig.suptitle('Vaccine response by SMM 20/2/20 risk tier (treated counts annotated under n)',
              fontsize=11.5, fontweight='bold', y=0.96)
 
-OUT_PNG = FIGURES_DIR / 'SupFig1_RiskGenetics_VaccineResponse.png'
+OUT_PNG = FIGURES_DIR / 'SupFig1.png'
 plt.savefig(OUT_PNG, dpi=300, bbox_inches='tight')
 plt.savefig(str(OUT_PNG).replace('.png','.pdf'), bbox_inches='tight')
 plt.savefig(str(OUT_PNG).replace('.png','.svg'), bbox_inches='tight')

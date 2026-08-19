@@ -1,6 +1,6 @@
 # ============================================================================
 # Purpose:      Figure 5D-F: paired pre vs post vaccination Olink levels of DDX58 (RIG-I), NUB1 and MMP7 in HD/MGUS/SMM, plotted with the plot_cytokine() helper defined in Figure5AB.R.
-#               REVISION: q-values are inherited from PANEL_Q, the panel-wide Benjamini-Hochberg family of 156 tests (52 analytes x 3 disease groups) defined in Figure5AB.R, as stated in the Methods.
+#               q-values are inherited from PANEL_Q, the panel-wide Benjamini-Hochberg family of 156 tests (52 analytes x 3 disease groups) defined in 01_Figure5AB.R, matching the Methods.
 # Inputs:       Inherited from Figure5AB.R after sourcing it: master_paired data frame, plot_cytokine() and PANEL_Q.
 # Outputs:      figures/Figure5D.png, figures/Figure5E.png, figures/Figure5F.png (and matching PDFs).
 # Dependencies: R + tidyverse, ggpubr (inherited from Figure5AB.R); sources Figure5AB.R.

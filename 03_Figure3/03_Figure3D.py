@@ -4,8 +4,7 @@ across disease stage, SWIFT-seq cohort (Lightbody et al., Nat Cancer 2025).
 
 Purpose:      Cross-sectional decline of the 15-gene APRIL-responsive module in NON-MALIGNANT
               plasma cells along NBM -> MGUS -> SMM -> NDMM, shown separately for bone marrow and
-              peripheral blood. Replaces the smaller published-cohort version of this analysis,
-              which now appears as Supplementary Figure 4B.
+              peripheral blood.
 
 Inputs:       data/external/swiftseq_april_persample_deid.csv -- de-identified per-sample summary
               (sample and patient keys, compartment, grouped disease stage, serial timepoint index,

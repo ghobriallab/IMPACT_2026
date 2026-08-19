@@ -1,34 +1,37 @@
-# Figure 1 — Antibody waning
-
-Code to reproduce Figure 1 of *Myeloma precursors are associated with suboptimal immune responses to vaccination*.
+# Figure 1: Antibody waning
 
 | Panel | Script | Description |
 |-------|--------|-------------|
-| 1B | `Figure1B.R` | Spike IgG titers 2–8 weeks post-2nd dose (HD / MGUS / SMM / MM) |
-| 1C | `Figure1C.R` | Spike IgG titers 2–4 months post-2nd dose (waning timepoint) |
-| 1D | `Figure1D.R` | Per-individual serial titer trajectories |
-| 1E | `Figure1E.R` | Linear mixed-effects model of waning slope (MGUS vs SMM-untreated) |
-| 1F | `Figure1F.R` | Spike IgG titers after the 3rd dose (SMM split into Untreated / Treated) |
+| 1B | `01_Figure1B.R` | Spike IgG titers 2-8 weeks post-2nd dose (HD / MGUS / SMM / MM) |
+| 1C | `02_Figure1C.R` | Spike IgG titers 2-4 months post-2nd dose |
+| 1D | `03_Figure1D.R` | Per-individual serial titer trajectories |
+| 1E | `04_Figure1E.R` | Linear mixed-effects model of waning slope (MGUS vs untreated SMM) |
+| 1F | `05_Figure1F.R` | Spike IgG titers after the 3rd dose, SMM split into untreated and treated |
 
-## Statistical framework
+## Statistics
 
-Cross-sectional disease-vs-HD contrasts use age- and sex-adjusted rank-based ANCOVA with Benjamini–Hochberg correction. Ordered-trend statistics use the Jonckheere–Terpstra test on age+sex residuals (helper `jt_test_residuals_age_sex()` in `../config.R`). The significance threshold throughout is q (or p) < 0.1.
+Cross-sectional disease-vs-HD contrasts use age- and sex-adjusted rank-based ANCOVA with
+Benjamini-Hochberg correction. Ordered trends use the Jonckheere-Terpstra test on age+sex
+residuals (`jt_test_residuals_age_sex()` in `../config.R`). Significance threshold q < 0.1.
 
 ## Inputs
 
-- `data/elisa/elisa_spike_post2nd.csv` — de-identified post-2nd-dose ELISA titers (panels 1B/1C).
-- `data/elisa/elisa_spike_post3rd.csv` — de-identified post-3rd-dose ELISA titers (panel 1F).
-- `data/elisa/elisa_serial_titers_all.csv` and `elisa_serial_titers_filtered.csv` — serial titer trajectories (panels 1D/1E).
+| File | Panels |
+|------|--------|
+| `data/elisa/elisa_spike_post2nd.csv` | 1B, 1C |
+| `data/elisa/elisa_spike_post3rd.csv` | 1F |
+| `data/elisa/elisa_serial_titers_all.csv`, `elisa_serial_titers_filtered.csv` | 1D, 1E |
 
-All inputs are hosted on Zenodo (DOI [10.5281/zenodo.18989222](https://doi.org/10.5281/zenodo.18989222)). Edit `SCRNA_DIR` in `../config.py` / `../config.R` to point at your local copy. If you mirror the deposit to an internal Google Cloud Storage bucket (e.g. `gs://your-bucket/impact_data/`), `gsutil cp -r gs://your-bucket/impact_data/elisa data/` reproduces the layout expected by these scripts.
+All inputs come from the Zenodo deposit (DOI [10.5281/zenodo.18989222](https://doi.org/10.5281/zenodo.18989222));
+see the root README for the expected `data/` layout.
 
 ## Run
 
 ```bash
-cd Figure1
-Rscript Figure1B.R   # outputs ../figures/Figure1B.png
-Rscript Figure1C.R
-Rscript Figure1D.R
-Rscript Figure1E.R
-Rscript Figure1F.R
+cd 01_Figure1
+Rscript 01_Figure1B.R    # writes ../figures/Figure1B.{png,pdf,svg}
+Rscript 02_Figure1C.R
+Rscript 03_Figure1D.R
+Rscript 04_Figure1E.R
+Rscript 05_Figure1F.R
 ```

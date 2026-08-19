@@ -54,7 +54,7 @@ def save_figure(basename, dpi=300):
 
 APRIL_GENE = 'TNFSF13'
 DISEASE_GROUPS = ['HD', 'MGUS', 'SMM']   # raw Diagnosis values used to filter the deposit
-# REVISION: SMM is displayed as two columns, untreated and previously/actively treated, so that
+# SMM is displayed as two columns, untreated and previously/actively treated, so that
 # disease stage is separated from prior therapy (matching Figure 1B/1C/1F). Contrasts remain each
 # group versus HD; BH now runs across 6 contrasts (3 per timepoint) rather than 4.
 PLOT_GROUPS = ['HD', 'MGUS', 'SMM (Untreated)', 'SMM (Treated)']
@@ -88,7 +88,7 @@ def main():
     )
     myeloid_df = cells[keep].copy()
     myeloid_df['Timepoint'] = myeloid_df['tp_raw'].map(tp_map)
-    # REVISION: treated SMM are retained as their own group instead of being dropped.
+    # Treated SMM are retained as their own group.
     myeloid_df['group'] = np.where(
         myeloid_df['diagnosis'] != 'SMM', myeloid_df['diagnosis'],
         np.where(myeloid_df['treat'] == 'Never_treated', 'SMM (Untreated)', 'SMM (Treated)'))
@@ -165,7 +165,7 @@ def main():
         print(f"  {r['Timepoint']} {r['Comparison']}: p_adj={r['pval_adj']:.4g}, q_adj(BH)={r['qval']:.4g}")
 
     # Two-panel boxplot figure
-    # REVISION: treated SMM in a darker red than untreated SMM.
+    # Treated SMM in a darker red than untreated SMM.
     diag_colors = {'HD': '#3498db', 'MGUS': '#f1c40f',
                    'SMM (Untreated)': '#e74c3c', 'SMM (Treated)': '#A93226'}
     fig, axes = plt.subplots(1, 2, figsize=(9, 3.4), sharey=True)

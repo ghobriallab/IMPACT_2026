@@ -57,7 +57,7 @@ cytokines_with_enough_data <- unique(cytokines_with_enough_data)
 data$Timepoint <- ifelse(data$Timepoint == "After_Vax", "Post-Vx", "Pre-Vx")
 data$Timepoint <- factor(data$Timepoint, levels = c("Pre-Vx", "Post-Vx"))
 
-# REVISION: age and sex come from the de-identified ELISA cohort table, NOT from the Olink file.
+# Age and sex come from the de-identified ELISA cohort table, NOT from the Olink file.
 # The Age column shipped with the Olink data holds a single fill value for every healthy donor, so
 # using it makes age a proxy for group membership. The assertion fails loudly if that ever returns.
 .demo <- read.csv(file.path(DATA_DIR, "elisa", "elisa_cohort_demographics.csv")) %>%
@@ -68,7 +68,7 @@ data$Timepoint <- factor(data$Timepoint, levels = c("Pre-Vx", "Post-Vx"))
 stopifnot(dplyr::n_distinct(.demo$Age[.demo$Patient_ID %in%
           data$Patient_ID[data$Diagnosis == "Healthy"]]) > 1)
 
-# REVISION: cross-sectional contrasts are age- and sex-adjusted rank-based ANCOVA, the
+# Cross-sectional contrasts are age- and sex-adjusted rank-based ANCOVA, the
 # covariate-adjusted analogue of the Wilcoxon rank-sum test, Benjamini-Hochberg corrected across all
 # 156 tests within a timepoint (52 proteins x 3 pairwise contrasts). This is the same screen and the
 # same family that Figure 2D plots, so the two panels cannot disagree.

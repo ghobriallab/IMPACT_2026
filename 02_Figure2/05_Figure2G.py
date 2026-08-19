@@ -149,7 +149,7 @@ print(f"M-spike IMWG response: {n_cr} CR / {n_vgpr} VGPR / {n_pr} PR")
 # ---- Compute paired Wilcoxon stats for the FOUR sub-panels UP FRONT (BH across 4) ----
 stats_data = {}
 
-# (1) M-spike — different scale, so track separately but include in BH family
+# (1) M-spike: different scale, so track separately but include in the BH family
 sub_b = coh_mspike["Baseline_M_spike_num"].values
 sub_p = coh_mspike["PostTEC_M_spike_num"].values
 delta = sub_p - sub_b

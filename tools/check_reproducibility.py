@@ -43,8 +43,11 @@ LOCAL_PATH_PATTERNS = re.compile(
 )
 # Patterns that are false-positives in the evaluation tool itself
 SELF_EXEMPT_PATTERNS = re.compile(r"LOCAL_PATH_PATTERNS|check_reproducibility")
-GCS_MENTION_PATTERNS = re.compile(
-    r'gs://|gsutil|gcloud storage', re.IGNORECASE
+# A README passes if it says how to obtain the data, whether that is a cloud-storage mirror
+# or a public archive (Zenodo, GEO, dbGaP, SRA, or a bare DOI).
+DATA_SOURCE_PATTERNS = re.compile(
+    r'gs://|gsutil|gcloud storage|zenodo|10\.5281/|doi\.org|GSE\d|phs\d|SRP\d|ENA|dryad',
+    re.IGNORECASE
 )
 PHI_PATTERNS = [
     (re.compile(r'\b\d{3}-\d{2}-\d{4}\b'), "SSN-like pattern"),
@@ -238,8 +241,8 @@ def check_path_hygiene(root: Path) -> CategoryResult:
     return CategoryResult("Path Hygiene", score, max_score, issues)
 
 
-def check_gcs_handling(root: Path) -> CategoryResult:
-    """READMEs mention GCS copy instructions; .gitignore covers data files; no large files committed."""
+def check_data_handling(root: Path) -> CategoryResult:
+    """READMEs say where the data live; .gitignore covers data files; no large files committed."""
     max_score = 15
     issues = []
     score = max_score
@@ -259,7 +262,7 @@ def check_gcs_handling(root: Path) -> CategoryResult:
             )
             score -= 2
 
-    # 2. READMEs mention GCS copy/mount instructions
+    # 2. READMEs say where the data come from
     readmes = list(root.rglob("README.md")) + list(root.rglob("readme.md"))
     readmes = [r for r in readmes if not any(part in IGNORED_DIRS for part in r.parts)]
     readmes_without_gcs = []
@@ -268,19 +271,24 @@ def check_gcs_handling(root: Path) -> CategoryResult:
             content = readme.read_text(errors="replace")
         except OSError:
             continue
-        if not GCS_MENTION_PATTERNS.search(content):
+        # Only READMEs that point at data files need to say where those files come from.
+        # A README for tooling or CI has no data to source.
+        is_root = readme.parent.resolve() == root.resolve()
+        if not (is_root or "data/" in content):
+            continue
+        if not DATA_SOURCE_PATTERNS.search(content):
             readmes_without_gcs.append(readme.relative_to(root))
 
     if readmes_without_gcs:
         examples = truncate_list([str(p) for p in readmes_without_gcs])
         issues.append(
-            f"{len(readmes_without_gcs)} README(s) don't mention GCS (gs://, gsutil, or gcloud storage) "
-            f"— add mount/copy instructions: {examples}"
+            f"{len(readmes_without_gcs)} README(s) don't say where the data come from "
+            f"(a gs:// mirror, or a Zenodo/GEO/dbGaP accession): {examples}"
         )
         deduction = min(5, len(readmes_without_gcs) * 2)
         score -= deduction
     elif not readmes:
-        issues.append("No README.md found — cannot check GCS copy instructions")
+        issues.append("No README.md found, so data-source instructions cannot be checked")
         score -= 3
 
     # 3. Large data files present in the tree
@@ -301,7 +309,7 @@ def check_gcs_handling(root: Path) -> CategoryResult:
         )
         score -= min(3, len(large_files))
 
-    return CategoryResult("GCS Data Handling", max(0.0, score), max_score, issues)
+    return CategoryResult("Data Handling", max(0.0, score), max_score, issues)
 
 
 def check_naming(root: Path) -> CategoryResult:
@@ -474,7 +482,7 @@ def main():
         check_step_ordering(root),
         check_documentation(root),
         check_path_hygiene(root),
-        check_gcs_handling(root),
+        check_data_handling(root),
         check_naming(root),
         check_phi_safety(root),
     ]

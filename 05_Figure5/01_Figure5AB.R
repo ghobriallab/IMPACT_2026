@@ -1,6 +1,6 @@
 # ============================================================================
 # Purpose:      Figure 5A-B: plasma IL-1B and IL-18 Olink levels, paired pre vs post vaccination, in HD/MGUS/SMM. The single MGUS patient with prior systemic therapy is dropped to keep the cohort treatment-naive. Defines the plot_cytokine() helper reused by Figure5DEF.R.
-#               REVISION: q-values are Benjamini-Hochberg corrected across the WHOLE panel (52 analytes x 3 disease groups = 156 tests), as stated in the Methods, rather than across the 3 disease groups of a single analyte. Effect sizes r are unaffected by the correction.
+#               q-values are Benjamini-Hochberg corrected across the whole panel (52 analytes x 3 disease groups = 156 tests), matching the Methods. Effect sizes r are unaffected by the correction.
 # Inputs:       data/olink/olink_cytokines.csv.
 # Outputs:      figures/Figure5A.png and figures/Figure5B.png (and matching PDFs); side-effect: plot_cytokine() is left in the global environment for Figure5DEF.R.
 # Dependencies: R + tidyverse, rstatix, ggpubr; sources ../config.R for FONT and save_figure().
@@ -52,7 +52,7 @@ counts$n_ind <- paste0(ifelse(counts$Var2 == "Healthy", "HD", as.character(count
                        "\n (n=", counts$Freq, ")")
 master_paired$n_ind <- counts$n_ind[match(master_paired$matchname, counts$matchname)]
 
-# REVISION: panel-wide multiple-testing family.
+# Panel-wide multiple-testing family.
 # The Methods state that paired pre- versus post-vaccination comparisons are BH-corrected
 # "across all cytokines tested", so the correction is computed ONCE over the whole panel
 # rather than within each analyte. The family is every analyte with at least 3 paired

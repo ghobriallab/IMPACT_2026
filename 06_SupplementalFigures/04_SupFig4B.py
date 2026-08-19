@@ -1,24 +1,18 @@
 #!/usr/bin/env python3
-"""Supplementary Figure 4B (was main Figure 3D): APRIL-responsive gene module score in NON-MALIGNANT
-plasma cells from published bone-marrow scRNA-seq (Boiarsky et al. 2022, GSE193531), across
-NBM -> MGUS -> SMM.
+"""Supplementary Figure 4B: APRIL-responsive gene module score in non-malignant bone-marrow
+plasma cells across NBM -> MGUS -> SMM (Boiarsky et al. 2022, GSE193531).
 
-REVISION (2026-08-11, co-author request): malignant ('neoplastic') plasma cells were REMOVED
-from this panel. Only the non-malignant ('normal') plasma cells classified by inferCNV by the
-original authors are shown. The niche-depletion argument concerns the bystander normal plasma
-cell compartment, and showing malignant cells alongside it opened a separate discussion the
-paper does not need. Removing them changes none of the retained statistics: the JT trend and
-both cross-stage contrasts are computed on normal PCs only and are numerically identical to the
-previous 5-box version (JT z=-3.051, p=0.002279; NBM-MGUS q=0.1135; NBM-SMM q=0.003996).
-Dropped with the malignant boxes: the MGUS-vs-SMM malignant contrast (raw p=0.0703) and the two
-within-stage normal-vs-malignant contrasts (both ns).
+Purpose:      Published-cohort validation of the APRIL-responsive gene module in the bystander
+              normal plasma cell compartment, the population the niche-depletion argument
+              concerns. Malignant plasma cells, classified by inferCNV by the original authors,
+              are excluded.
 
-Statistic of record (shown on the figure): Jonckheere-Terpstra ordered trend across
-NBM -> MGUS -> SMM, plus BH-corrected cross-stage contrasts vs NBM.
+Statistics:   Jonckheere-Terpstra ordered trend across NBM -> MGUS -> SMM, plus Benjamini-
+              Hochberg-corrected cross-stage contrasts versus NBM. Both are shown on the figure.
 
-Purpose:      Supplementary Figure 4B (was main Figure 3D): published-cohort validation of the APRIL-responsive gene module in non-malignant bone marrow plasma cells across NBM/MGUS/SMM, with a Jonckheere-Terpstra ordered-trend test.
-
-Inputs:       GSE193531 count matrix + companion cell-level metadata (CNV-based malignant calls, used here only to EXCLUDE malignant cells).
+Inputs:       data/external/GSE193531_umi-count-matrix.csv.gz and
+              data/external/GSE193531_cell-level-metadata.csv, the latter carrying the CNV-based
+              malignant calls used here only to exclude malignant cells.
 
 Outputs:      figures/SupFig4B.png (and PDF + SVG).
 
@@ -121,14 +115,11 @@ agg = agg[agg['n_cells'] >= MIN_CELLS_PER_SAMPLE].copy()
 # normal PCs (NBM -> MGUS -> SMM, 3 groups) is reported.)
 # Box colors encode the population (blue shades = non-malignant normal PCs going light-to-dark
 # along NBM -> SMM; red shades = malignant neoplastic PCs going light-to-dark along MGUS -> SMM).
-# Same disease palette as manuscript Figure 3D (config COLORS): NBM takes the HD colour,
-# since it is the healthy-marrow comparator, so the two panels read as one disease axis.
-# REVISION: palette matched to Figure 3C (diag_colors) so HD/NBM, MGUS and SMM read as one
-# disease axis across the two panels.
+# Same disease palette as Figure 3C and Figure 3D: NBM takes the HD colour, since it is the
+# healthy-marrow comparator, so the same disease stage reads the same wherever it appears.
 NORMAL_SHADES     = ['#3498db', '#f1c40f', '#e74c3c']   # NBM(=HD), MGUS, SMM
-# REVISION: malignant ('neoplastic') plasma cells removed at co-author request. The panel now
-# shows only non-malignant plasma cells, which is the population the APRIL-niche argument is
-# about; including malignant cells opened a separate discussion the paper does not need.
+# Only non-malignant plasma cells are shown, which is the population the APRIL-niche argument
+# concerns.
 SPECS = [
     ('NBM',  'NBM',  'normal', NORMAL_SHADES[0], False),
     ('MGUS', 'MGUS', 'normal', NORMAL_SHADES[1], False),
@@ -242,9 +233,9 @@ for (lbl, ia, ib), y in zip(norm_cross, norm_lvl):
 
 center_x = 2    # midpoint of the 3-box layout. Two-line JT label centered here.
 # JT normal PC line: prefix in normal weight, stat (z, p) bold on a second line.
-# REVISION: the bold stat was previously mathtext ($\mathbf{...}$). matplotlib renders mathtext as
-# glyph OUTLINES in a separate math font, so that one label came out in DejaVu Sans and was not
-# editable text in the SVG. Drawn as two plain Arial text objects instead.
+# Drawn as two plain text objects rather than mathtext: matplotlib renders mathtext as glyph
+# outlines in a separate math font, which would break the Arial setting and leave the label
+# uneditable in the SVG.
 ax.text(center_x, jt_norm_y + 0.055 * yr,
         "Jonckheere-Terpstra ordered trend (NBM → SMM)",
         ha='center', va='center', fontsize=11.5, fontweight='normal')

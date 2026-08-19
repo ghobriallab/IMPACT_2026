@@ -4,7 +4,7 @@
 # Outputs:      DATA_DIR, FIGURES_DIR, TABLES_DIR, COLORS, FONT, save_figure(), jt_test_residuals_age_sex() (sourced by every R figure script).
 # Dependencies: R base; tryCatch; rstudioapi (optional, command-line Rscript falls back to getwd()).
 # ============================================================================
-# IMPACT — Configuration
+# IMPACT configuration
 # Edit these paths to match your local environment.
 
 # Base directory containing scRNA-seq h5ad files (from GEO/Zenodo)
@@ -26,7 +26,7 @@ DATA_DIR <- file.path(REPO_DIR, "..", "data")
 FIGURES_DIR <- file.path(REPO_DIR, "..", "figures")
 dir.create(FIGURES_DIR, showWarnings = FALSE, recursive = TRUE)
 
-# REVISION: output directory for generated tables and figure source data
+# Output directory for generated tables and figure source data
 TABLES_DIR <- file.path(REPO_DIR, "..", "tables")
 dir.create(TABLES_DIR, showWarnings = FALSE, recursive = TRUE)
 

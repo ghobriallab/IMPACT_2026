@@ -1,49 +1,48 @@
 #!/usr/bin/env python3
-"""Bone-marrow myeloid TNFSF13 (APRIL) analysis (Zavidij et al., 2020, GSE124310).
+"""Supplementary Figure 3B: bone-marrow myeloid TNFSF13 (APRIL) expression across HD/MGUS/SMM/MM.
 
-Extends peripheral myeloid TNFSF13 (manuscript Figure 3C) into the bone marrow
-niche using the Zavidij et al. (Nat Cancer 2020, GSE124310) BM CD138-depleted scRNA-seq
-across HD/MGUS/SMM/MM. Tests whether myeloid TNFSF13 transcript is preserved at the BM
-niche, the actual site of plasma cell survival.
+Purpose:      Extends the peripheral-blood myeloid TNFSF13 analysis of Figure 3C into the bone
+              marrow, the site where plasma cells survive, using the CD138-depleted marrow
+              scRNA-seq of Zavidij et al. (Nat Cancer 2020, GSE124310).
 
-Pipeline:
-  1. Load all 32 GSE124310 samples (10x v2 matrices), tag per-sample + disease group.
-  2. Standard QC: drop cells with <200 or >5000 genes, >15% mt.
-  3. Normalize, log1p, HVG, scale, PCA. No batch correction (paper-style: examine per-cell
-     and per-sample summaries, not integrated UMAP).
-  4. Cluster (Leiden) + score canonical lineage markers; aggregate to lineage labels
-     (Mono / DC / T / B / NK / other).
-  5. Per-sample mean TNFSF13 in Mono+DC cells (matches Fig 3C aggregation).
-  6. Compare HD vs MGUS, HD vs SMM, HD vs MM with Mann-Whitney U + BH (no Age/Sex metadata
-     for the public Zavidij release, so age/sex adjustment is not feasible).
-  7. Save per-patient table, lineage-cell-count table, and SupFig PNG.
+Pipeline:     Load the 32 GSE124310 10x v2 matrices and tag each with its disease group; QC
+              (200-5,000 genes, <15% mitochondrial); normalize, log1p, HVG, scale, PCA; Leiden
+              cluster and assign lineages from canonical markers; take the per-sample mean
+              TNFSF13 in monocytes and dendritic cells, matching the Figure 3C aggregation;
+              compare each disease group with HD.
 
-Outputs:
-  zavidij_bm_per_sample_summary.csv
-  zavidij_bm_lineage_counts.csv
-  zavidij_bm_TNFSF13_supfig.png
+Statistics:   Two-sided Wilcoxon rank-sum with Benjamini-Hochberg correction across the three
+              contrasts. The public Zavidij release carries no age or sex metadata, so these
+              contrasts are unadjusted.
 
-Purpose:      Supplementary Figure 3: bone-marrow myeloid TNFSF13 (APRIL) expression in HD/MGUS/SMM/MM, using the Zavidij et al. (Nat Cancer 2020, GSE124310) BM CD138-depleted scRNA-seq. Extends peripheral Figure 3C into the niche site of plasma-cell survival.
+Inputs:       data/external/zavidij_bm/matrices/ -- one directory per GSE124310 sample, each
+              holding matrix.mtx, genes.tsv and barcodes.tsv. Download the supplementary file
+              of GSE124310 from GEO and extract it there; the directory names carry the sample
+              labels (NBM*, MGUS*, SMMl*, SMMh*, MM*) that set the disease groups.
 
-Inputs:       32 GSE124310 sample matrices (loaded via scanpy; QC-filtered and lineage-scored from canonical markers).
+Outputs:      figures/SupFig3B.png (and PDF + SVG); tables/zavidij_bm_per_sample_summary.csv,
+              tables/zavidij_bm_lineage_counts.csv, tables/zavidij_bm_TNFSF13_stats.csv.
 
-Outputs:      figures/SupFig3.png + zavidij_bm_per_sample_summary.csv + zavidij_bm_lineage_counts.csv.
-
-Dependencies: Python + scanpy, pandas, numpy, scipy, matplotlib; reads config.py.
+Dependencies: Python + scanpy, pandas, numpy, scipy, statsmodels, matplotlib; reads config.py.
 """
+
 import sys, os, warnings, re
 warnings.filterwarnings('ignore')
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from config import *
+
 import numpy as np
 import pandas as pd
 import scanpy as sc
 from scipy import io, sparse, stats
 from statsmodels.stats.multitest import multipletests
 import matplotlib.pyplot as plt
-from pathlib import Path
 
-ROOT = Path(__file__).parent
-SAMPLES = ROOT / 'extracted'
-OUT = ROOT  # write outputs alongside script
+SAMPLES = DATA_DIR / 'external' / 'zavidij_bm' / 'matrices'
+TABLES_DIR = REPO_DIR / 'tables'
+TABLES_DIR.mkdir(exist_ok=True)
+OUT = TABLES_DIR
 
 # Disease-group recoder. Zavidij naming: NBM=healthy; MGUS, SMMh (high-risk), SMMl (low-risk), MM.
 def disease_of(name):
@@ -91,6 +90,11 @@ def load_sample(d):
     return a
 
 def main():
+    if not SAMPLES.is_dir():
+        raise SystemExit(
+            f"GSE124310 sample matrices not found at {SAMPLES}.\n"
+            "Download the GSE124310 supplementary file from GEO and extract it there, one "
+            "directory per sample containing matrix.mtx, genes.tsv and barcodes.tsv.")
     sample_dirs = sorted([p for p in SAMPLES.iterdir() if p.is_dir()])
     print(f"Loading {len(sample_dirs)} samples...")
     adatas = []
@@ -240,7 +244,7 @@ def main():
     # y-axis: pad above the highest bracket
     ax.set_ylim(-0.001, ymax + 4 * step)
     plt.tight_layout()
-    out_png = OUT / 'zavidij_bm_TNFSF13_supfig.png'
+    out_png = FIGURES_DIR / 'SupFig3B.png'
     plt.savefig(out_png, dpi=300, bbox_inches='tight', facecolor='white')
     plt.savefig(out_png.with_suffix('.pdf'), bbox_inches='tight', facecolor='white')
     plt.savefig(out_png.with_suffix('.svg'), bbox_inches='tight', facecolor='white')

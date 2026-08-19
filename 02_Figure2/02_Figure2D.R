@@ -139,7 +139,7 @@ plot_df <- res %>%
 
 # Only APRIL is labelled; every other protein is identifiable from the source-data CSVs.
 lab_df <- plot_df %>% filter(Protein == "TNFSF13", Comparison == "SMM vs HD")
-# REVISION: the two axes span very different ranges (the strongest pre-Vx hit is far weaker than
+# The two axes span very different ranges (the strongest pre-Vx hit is far weaker than
 # the strongest post-Vx hit), so a single square limit left roughly 40% of the panel empty. Each
 # axis now gets its own data-driven limit, which fills the wider canvas.
 xlim_hi <- max(plot_df$x) * 1.13

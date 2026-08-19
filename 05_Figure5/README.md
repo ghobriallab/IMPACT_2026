@@ -1,33 +1,41 @@
-# Figure 5 — Blunted innate / cytokine responses
-
-Code to reproduce Figure 5.
+# Figure 5: Blunted innate and cytokine responses
 
 | Panel | Script | Description |
 |-------|--------|-------------|
-| 5A / 5B | `Figure5AB.R` | IL-1B and IL-18 plasma protein levels (Olink), paired pre vs post vaccination |
-| 5C | `Figure5C.py` | IL-1B response gene signature score (scRNA-seq), paired pre vs post |
-| 5D / 5E / 5F | `Figure5DEF.R` | DDX58 (RIG-I), NUB1 and MMP7 Olink levels, paired pre vs post |
+| 5A, 5B | `01_Figure5AB.R` | Plasma IL-1B and IL-18 (Olink), paired pre vs post vaccination |
+| 5C | `02_Figure5C.py` | IL-1B response gene signature score (scRNA-seq), paired pre vs post |
+| 5D, 5E, 5F | `03_Figure5DEF.R` | Plasma DDX58 (RIG-I), NUB1 and MMP7 (Olink), paired pre vs post |
 
-`Figure5DEF.R` `source()`s `Figure5AB.R` to reuse its data prep and the `plot_cytokine()` helper. Run order: 5AB before 5DEF.
+`03_Figure5DEF.R` sources `01_Figure5AB.R` for its data prep and the `plot_cytokine()` helper,
+so run 5AB first.
 
-## Statistical framework
+## Statistics
 
-Paired pre vs post within group: Wilcoxon signed-rank. Significance threshold p < 0.1; paired tests are inherently controlled for age and sex (each individual is their own baseline). The IL-1B signature score is re-normalized from the counts layer on a 2,678-HVG control pool before `score_genes`.
+Paired pre vs post uses a two-sided Wilcoxon signed-rank test. Paired designs are inherently
+controlled for age and sex, since each individual is their own baseline. Olink q-values come from
+the panel-wide Benjamini-Hochberg family of 156 tests (52 analytes x 3 disease groups) defined in
+`01_Figure5AB.R` and inherited by `03_Figure5DEF.R`, matching the Methods. The IL-1B signature is
+scored on cells re-normalized from the counts layer against a 2,678-HVG control pool, after
+excluding QC-failed cells, doublets, platelets and CLL. Significance threshold q (or p) < 0.1.
 
-Treatment-naive Olink cohort: the single MGUS patient with prior systemic therapy is excluded from panels 5A/B and 5D-F (R2 revision).
+The single MGUS participant with prior systemic therapy is excluded from the Olink panels, which
+are restricted to treatment-naive individuals.
 
 ## Inputs
 
-- `data/olink/olink_cytokines.csv` — paired Olink cytokine matrix (panels 5A/B/D/E/F).
-- `scRNAseq_IMPACT_Zenodo.h5ad` + `data/hvg_2678_genes.txt` (control pool) + `data/il1b_response_genes_human.csv` (gene set) — for panel 5C.
+| File | Panels |
+|------|--------|
+| `data/olink/olink_cytokines.csv` | 5A, 5B, 5D, 5E, 5F |
+| `scRNAseq_IMPACT_Zenodo.h5ad`, `data/hvg_2678_genes.txt`, `data/il1b_response_genes_human.csv` | 5C |
 
-All inputs are hosted on Zenodo (DOI [10.5281/zenodo.18989222](https://doi.org/10.5281/zenodo.18989222)). To mirror the deposit to an internal Google Cloud Storage bucket: `gsutil cp gs://your-bucket/impact_data/scRNAseq_IMPACT_Zenodo.h5ad .` and `gsutil cp -r gs://your-bucket/impact_data/olink data/`.
+All inputs come from the Zenodo deposit (DOI [10.5281/zenodo.18989222](https://doi.org/10.5281/zenodo.18989222));
+see the root README for the expected `data/` layout and for where to point `SCRNA_DIR`.
 
 ## Run
 
 ```bash
-cd Figure5
-Rscript Figure5AB.R    # outputs Figure5A.png, Figure5B.png
-python  Figure5C.py    # outputs Figure5C.png
-Rscript Figure5DEF.R   # outputs Figure5D/E/F.png (sources Figure5AB.R)
+cd 05_Figure5
+Rscript 01_Figure5AB.R    # writes ../figures/Figure5A.* and Figure5B.*
+python3 02_Figure5C.py
+Rscript 03_Figure5DEF.R   # sources 01_Figure5AB.R
 ```
