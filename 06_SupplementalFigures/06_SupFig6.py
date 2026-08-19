@@ -258,7 +258,6 @@ def main():
     for i, (v, arm) in enumerate(zip(dv, ARMS), start=1):
         axB.scatter(rng.normal(i, 0.08, size=len(v)), v, s=26, facecolor=ARM_COLORS[arm],
                     edgecolor="black", linewidth=0.5, zorder=3)
-    axB.axhline(0, color='grey', linestyle='--', linewidth=0.8)
     dspan = max(np.r_[a, b].max() - np.r_[a, b].min(), 1e-9)
     ytop = np.r_[a, b].max() + 0.10 * dspan
     axB.plot([1, 1, 2, 2], [ytop - 0.02 * dspan, ytop, ytop, ytop - 0.02 * dspan],
@@ -273,16 +272,11 @@ def main():
     for side in ("top", "right", "bottom", "left"):
         axB.spines[side].set_visible(True); axB.spines[side].set_color("black")
 
-    fig.text(0.02, 0.975, "A", fontsize=17, fontweight="bold")
-    fig.text(0.02, 0.475, "B", fontsize=17, fontweight="bold")
-    smm_all = d[d['Disease'] == PLOT_GROUP]
-    n_mixed = int((smm_all['stratum'] == 'Mixed or not recorded').sum())
-    fig.text(0.5, 0.03,
-             f"All paired HD (n=18) and MGUS (n=14) participants were shipped, so neither group "
-             f"supports this comparison.\n{n_mixed} of {len(smm_all)} paired SMM participants "
-             "have samples that differ in shipment status, or no record, and appear in neither stratum.",
-             ha='center', fontsize=8.5, style='italic', color='#555555')
-
+    _tag = dict(fontsize=15, fontweight="normal",
+                bbox=dict(boxstyle="square,pad=0.35", facecolor="white",
+                          edgecolor="black", linewidth=1.0))
+    fig.text(0.02, 0.975, "A", **_tag)
+    fig.text(0.02, 0.475, "B", **_tag)
     for ext in ("png", "pdf", "svg"):
         out = FIGURES_DIR / f"SupFig6.{ext}"
         plt.savefig(out, dpi=300, bbox_inches="tight", facecolor="white")
