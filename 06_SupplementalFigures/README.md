@@ -8,7 +8,8 @@ Code to reproduce the Supplementary Figures. Supplementary figures are numbered 
 | S2 | `02_SupFig2.py` | Per-lineage cell-type annotation UMAPs + canonical marker-gene heatmaps for the integrated scRNA-seq object |
 | S3A | `03_SupFig3A_shipment.py` | Figure 3C reproduced on shipped samples only; shipment control for Figure 3C |
 | S3B | `03_SupFig3.py` | Bone-marrow myeloid TNFSF13 (APRIL) expression across HD/MGUS/SMM/MM (Zavidij et al. 2020, GSE124310) |
-| S4 | `04_SupFig4.py` | External validation of the APRIL-responsive gene signature in APRIL-stimulated plasmablasts (GSE173644) |
+| S4A | `04_SupFig4A.py` | External validation of the APRIL-responsive gene signature in APRIL-stimulated plasmablasts (GSE173644) |
+| S4B | `04_SupFig4B.py` | APRIL-responsive module in non-malignant bone-marrow plasma cells across NBM/MGUS/SMM (Boiarsky GSE193531); was main Figure 3D |
 | S5 | `05_SupFig5.R` | Sample shipping (shipped vs not shipped) does not confound SARS-CoV-2 spike-specific TCR clonotype frequencies; paired-design control for Figure 4B |
 | S6 | `06_SupFig6.py` | Sample shipment and the IL-1beta response signature; shipment control for Figure 5C |
 
@@ -24,7 +25,7 @@ The three shipment controls (S3A, S5, S6) all define shipment from `Shipment_Fed
 
 - `scRNAseq_IMPACT_Zenodo.h5ad` and the per-lineage subcluster objects in `SUBCLUSTER_DIR`, for the lineage UMAPs and marker heatmaps (S2). S2 is the only supplementary figure that reads the single-cell object.
 - `data/elisa/elisa_spike_post2nd.csv`, `data/elisa/elisa_spike_post3rd.csv` and `data/smm_risk_strat.csv` for the risk-tier panels (S1).
-- External GSE124310 (Zavidij) sample matrices for S3, downloaded by the script; GSE173644 in-vitro APRIL stimulation time course for S4, shipped in the Zenodo deposit.
+- External GSE124310 (Zavidij) sample matrices for S3B; GSE173644 in-vitro APRIL stimulation time course for S4A and GSE193531 (Boiarsky) cell-level metadata and count matrix for S4B, both shipped in the Zenodo deposit.
 - `data/tcr/tcr_clonotype_proportions.rds` and `data/tcr/tcr_shipping_status.csv` for S5.
 - `data/metadata/Supplementary_Table_4_scRNAseq_sample_list.csv` for the `Shipment_FedEx` flag and the age/sex covariates used by S3A and S6, and `scRNAseq_IMPACT_Zenodo.h5ad` for their expression values. S6 additionally reads `data/il1b_response_genes_human.csv` and `data/hvg_2678_genes.txt`, and imports the cell filter, effect size and statistics helpers from `05_Figure5/02_Figure5C.py` so the two figures cannot drift apart.
 
@@ -38,7 +39,8 @@ python3 01_SupFig1.py
 python3 02_SupFig2.py
 python3 03_SupFig3A_shipment.py
 python3 03_SupFig3.py
-python3 04_SupFig4.py
+python3 04_SupFig4A.py
+python3 04_SupFig4B.py
 Rscript 05_SupFig5.R
 python3 06_SupFig6.py
 ```

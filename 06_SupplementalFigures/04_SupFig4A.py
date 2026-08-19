@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Supplementary Figure 4: APRIL-responsive gene signature validation (GSE205101/GSE173644).
+"""Supplementary Figure 4A: APRIL-responsive gene signature validation (GSE205101/GSE173644).
 
 Purpose:      Supplementary Figure 4: external validation of the APRIL-responsive gene signature in independent B-cell scRNA-seq cohorts (GSE205101 / GSE173644 in-vitro APRIL time course). Score the same 15-gene module and compare APRIL-treated vs untreated.
 
 Inputs:       External GSE205101 / GSE173644 in-vitro APRIL stimulation matrices (downloaded into data/external/).
 
-Outputs:      figures/SupFig4.png (signature-score boxes by condition).
+Outputs:      figures/SupFig4A.png (signature-score boxes by condition).
 
 Dependencies: Python + pandas, numpy, matplotlib, seaborn, scipy, statsmodels; reads config.py.
 """
@@ -157,6 +157,6 @@ fig.text(0.5, 0.955, f'{n_sig}/15 genes significantly upregulated at 120 min (pa
          ha='center', fontsize=10, color='#555555')
 
 plt.tight_layout(rect=[0, 0, 1, 0.94])
-plt.savefig(FIGURES_DIR / "SupFig4.png", dpi=300, bbox_inches='tight', facecolor='white')
+plt.savefig(FIGURES_DIR / "SupFig4A.png", dpi=300, bbox_inches='tight', facecolor='white')
 plt.close()
-print("Saved: SupFig4.png")
+print("Saved: SupFig4A.png")

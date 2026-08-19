@@ -91,7 +91,8 @@ for (key, nice), p, q in zip(COMPS, ps, qs):
           f"median diff {np.median(d):+.4f}, paired Wilcoxon p={p:.3g}, q={q:.3g}")
 
 pos = [1, 2, 3.6, 4.6]
-fig, ax = plt.subplots(figsize=(6.25, 5.0))   # width 1.25x the Figure 3D panel
+# Narrow enough to sit beside Figure 3D on one page width; 3D is 6.0 in, this is 3.6 in.
+fig, ax = plt.subplots(figsize=(3.6, 4.6))
 bp = ax.boxplot(data, positions=pos, widths=0.6, patch_artist=True, showfliers=False,
                 medianprops=dict(color='black', linewidth=1.8), zorder=2)
 for patch, c in zip(bp['boxes'], colors):
@@ -108,8 +109,8 @@ for i, (vals, c) in enumerate(zip(data, colors)):
     ax.scatter(jit[i], vals, s=28, color=c, edgecolor='black', linewidth=0.5, alpha=0.92, zorder=3)
 
 ax.set_xticks(pos)
-ax.set_xticklabels([f"{lab}\nn={len(v)}" for lab, v in zip(labels, data)], fontsize=11)
-ax.set_ylabel('APRIL-responsive module score\n(per-sample mean, plasma cells)', fontsize=12)
+ax.set_xticklabels([f"{lab}\nn={len(v)}" for lab, v in zip(labels, data)], fontsize=8.5)
+ax.set_ylabel('APRIL-responsive module score\n(per-sample mean, plasma cells)', fontsize=9)
 ax.tick_params(axis='y', labelsize=11)
 
 ymin = min(np.min(v) for v in data); yr = max(np.max(v) for v in data) - ymin
@@ -119,13 +120,13 @@ for (x1, x2), q in zip([(pos[0], pos[1]), (pos[2], pos[3])], qs):
     h = 0.018 * yr
     ax.plot([x1, x1, x2, x2], [LVL - h, LVL, LVL, LVL - h], color='black', linewidth=1.0)
     ax.text((x1 + x2) / 2, LVL + 0.4 * h, f"q={q:.2f}" if q >= 0.01 else f"q={q:.1e}",
-            ha='center', va='bottom', fontsize=10.5)
+            ha='center', va='bottom', fontsize=8)
 for side in ('top', 'right'):
     ax.spines[side].set_visible(False)
 ax.set_xlim(0.4, 5.2)
-ax.set_title('Tumor vs normal plasma cells\n(Lightbody et al., phs003855)', fontsize=13, pad=8)
+ax.set_title('Tumor vs normal plasma cells\n(Lightbody et al., phs003855)', fontsize=10, pad=6)
 plt.tight_layout(); plt.subplots_adjust(bottom=0.20)
 for (x1, x2), (_, nice) in zip([(pos[0], pos[1]), (pos[2], pos[3])], COMPS):
-    ax.text((x1 + x2) / 2, -0.125, nice, ha='center', va='top', fontsize=12,
+    ax.text((x1 + x2) / 2, -0.125, nice, ha='center', va='top', fontsize=9,
             transform=ax.get_xaxis_transform())
 save_figure("Figure3E")

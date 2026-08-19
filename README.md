@@ -45,7 +45,7 @@ Raw sequencing data are deposited at GEO under accession GSEXXXXXX.
 
 | Accession | Reference | Used in |
 |-----------|-----------|---------|
-| [GSE193531](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193531) | Boiarsky et al., *Nat Commun* 2022 | Figure 3D |
+| [GSE193531](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193531) | Boiarsky et al., *Nat Commun* 2022 | Supplementary Figure 4B |
 | [phs003855](https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id=phs003855) (dbGaP, controlled access) | Lightbody et al., *Nat Cancer* 2025 (SWIFT-seq) | Figure 3E |
 | [GSE124310](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE124310) | Zavidij et al., *Nat Cancer* 2020 | Supplementary Figure 3B |
 | [GSE173644](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE173644) | Stephenson et al., *J Immunol* 2022 | Supplementary Figure 4 |
@@ -160,7 +160,8 @@ Folders carry a numeric prefix matching their manuscript-figure order, and scrip
 | S2 | `06_SupplementalFigures/02_SupFig2.py` | Python | Per-lineage cell-type annotation UMAPs + canonical marker-gene heatmaps |
 | S3A | `06_SupplementalFigures/03_SupFig3A_shipment.py` | Python | Figure 3C reproduced on shipped samples only (shipment control for Figure 3C) |
 | S3B | `06_SupplementalFigures/03_SupFig3.py` | Python | Bone-marrow myeloid TNFSF13 (APRIL) across HD/MGUS/SMM/MM (Zavidij GSE124310) |
-| S4 | `06_SupplementalFigures/04_SupFig4.py` | Python | External validation of the APRIL-responsive gene signature in APRIL-stimulated plasmablasts (GSE173644) |
+| S4A | `06_SupplementalFigures/04_SupFig4A.py` | Python | External validation of the APRIL-responsive gene signature in APRIL-stimulated plasmablasts (GSE173644) |
+| S4B | `06_SupplementalFigures/04_SupFig4B.py` | Python | APRIL-responsive module in non-malignant bone-marrow plasma cells across NBM/MGUS/SMM (Boiarsky GSE193531); was main Figure 3D |
 | S5 | `06_SupplementalFigures/05_SupFig5.R` | R | Sample shipping (shipped vs not shipped) does not confound SARS-CoV-2 spike-specific TCR clonotype frequencies (paired-design control for Figure 4B) |
 | S6 | `06_SupplementalFigures/06_SupFig6.py` | Python | Sample shipment and the IL-1beta response signature (shipment control for Figure 5C) |
 
