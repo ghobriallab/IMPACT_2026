@@ -3,7 +3,7 @@
 
 Purpose:      Figure 5C: IL-1B response gene signature score (BIOCARTA / Reactome-derived) in peripheral immune cells, paired pre vs post vaccination, in HD/MGUS/SMM. Scores re-normalized from the counts layer on a 2,678-HVG control pool; Wilcoxon signed-rank per group + BH correction.
 
-Inputs:       H5AD_IL1B (the de-identified comprehensive deposit; cells that failed quality control, the Platelets cluster and platelet-containing doublets are excluded); data/hvg_2678_genes.txt control pool; data/il1b_response_genes_human.csv gene set.
+Inputs:       H5AD_IL1B (the de-identified comprehensive deposit; cells that failed quality control, the Platelets cluster, platelet-containing doublets and plasma cells are excluded); data/hvg_2678_genes.txt control pool; data/il1b_response_genes_human.csv gene set.
 
 Outputs:      figures/Figure5C.png + per-patient IL-1B response-score table.
 
@@ -39,11 +39,14 @@ from scipy import stats
 import gc
 
 # Cell scope. Excluded: cells that failed quality control (QC_removed), the "Platelets" cluster,
-# and any platelet-containing doublet (db:*+Platelets). The upstream "MK" cluster is platelet
-# contamination (alpha-granule signature PPBP/PF4/TUBB1/NRGN, low UMI/n_genes, no CD34/MKI67/
-# RUNX1); it was relabeled "Platelets" in the deposit and the Figure 3B legend states that it is
-# excluded from downstream analyses. Remaining doublet categories are retained.
-EXCLUDE_CELLTYPES = ['QC_removed', 'Platelets', 'CLL']
+# any platelet-containing doublet (db:*+Platelets), and plasma cells (PC). The upstream "MK"
+# cluster is platelet contamination (alpha-granule signature PPBP/PF4/TUBB1/NRGN, low UMI/n_genes,
+# no CD34/MKI67/RUNX1); it was relabeled "Platelets" in the deposit and the Figure 3B legend
+# states that it is excluded from downstream analyses. Plasma cells are excluded so that this
+# panel scores the same circulating immune compartment as the rest of the paper; they are 1,348
+# of 1,163,643 cells here and their removal leaves every reported statistic unchanged (per-patient
+# scores shift by at most 4e-04). Remaining doublet categories are retained.
+EXCLUDE_CELLTYPES = ['QC_removed', 'Platelets', 'CLL', 'PC']
 EXCLUDE_PATTERNS = []                  # no blanket 'db:' exclusion
 EXCLUDE_SUBSTRINGS = ['Platelets']     # catches db:*+Platelets
 

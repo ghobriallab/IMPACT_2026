@@ -70,7 +70,7 @@ Processed data are deposited on Zenodo. The concept DOI always resolves to the l
 
 | File | Description | Size |
 |------|-------------|------|
-| `scRNAseq_IMPACT_Zenodo.h5ad` | De-identified single-cell object: 1,433,497 cells, 42,090 genes, normalized log1p `X`, int64 `counts` layer, `obsm['X_umap']`, and obs `Annotation_Level_1`, `Annotation_Level_2`, `Diagnosis`, `Timepoint`, `TreatmentStatus`. QC-failed cells, doublets, platelets and CLL are retained under explicit labels and filtered by the scripts, leaving 1,109,633 cells. | 9.6 GB |
+| `scRNAseq_IMPACT_Zenodo.h5ad` | De-identified single-cell object: 1,433,497 cells, 42,090 genes, normalized log1p `X`, int64 `counts` layer, `obsm['X_umap']`, and obs `Annotation_Level_1`, `Annotation_Level_2`, `Diagnosis`, `Timepoint`, `TreatmentStatus`. QC-failed cells, doublets and platelets are retained under explicit labels and filtered by the scripts; CLL is not included. Excluding QC-failed cells and doublets leaves 1,109,633 cells, which is what Figure 3B plots; platelets are removed on top of that by the analyses that quantify immune cells. | 9.6 GB |
 | `subclusters/` | Five per-lineage objects (B, T, monocyte, dendritic, NK) used by Supplementary Figure 2 | 100 MB |
 | Tabular files | De-identified serology, Olink, TCR, metadata and external-cohort inputs | tens of MB |
 

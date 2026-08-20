@@ -1,9 +1,10 @@
 # Figure 3: Impaired APRIL signaling in plasma cells
 
 Panels 3B and 3C come from the integrated peripheral-blood scRNA-seq (1,109,633 cells after
-excluding QC-failed cells, doublets, platelets and CLL; the deposited object retains these under
-explicit labels so the cohort stays traceable). Panels 3D and 3E come from the SWIFT-seq
-bone-marrow and peripheral-blood plasma-cell cohort (Lightbody et al., Nat Cancer 2025).
+excluding QC-failed cells, doublets and CLL; the deposited object retains these under explicit
+labels so the cohort stays traceable). Platelets are kept in this embedding and shown for
+completeness; they are excluded from the downstream analyses. Panels 3D and 3E come from the
+SWIFT-seq bone-marrow and peripheral-blood plasma-cell cohort (Lightbody et al., Nat Cancer 2025).
 
 | Panel | Script | Description |
 |-------|--------|-------------|

@@ -16,7 +16,8 @@ controlled for age and sex, since each individual is their own baseline. Olink q
 the panel-wide Benjamini-Hochberg family of 156 tests (52 analytes x 3 disease groups) defined in
 `01_Figure5AB.R` and inherited by `03_Figure5DEF.R`, matching the Methods. The IL-1B signature is
 scored on cells re-normalized from the counts layer against a 2,678-HVG control pool, after
-excluding QC-failed cells, doublets, platelets and CLL. Significance threshold q (or p) < 0.1.
+excluding QC-failed cells, platelets and platelet-containing doublets, plasma cells and CLL;
+other doublet categories are retained. Significance threshold q (or p) < 0.1.
 
 The single MGUS participant with prior systemic therapy is excluded from the Olink panels, which
 are restricted to treatment-naive individuals.
