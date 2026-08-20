@@ -21,8 +21,7 @@ so that repeatedly sampled participants are not counted more than once.
 Panel 3C uses age- and sex-adjusted rank-based ANCOVA against HD, Benjamini-Hochberg corrected
 across the six contrasts of the panel. Panel 3D uses a two-sided Jonckheere-Terpstra ordered-trend
 test across NBM to NDMM, plus two-sided Wilcoxon rank-sum contrasts against NBM with BH correction
-within each compartment; the external cohort carries no age or sex metadata, so these are
-unadjusted. Panel 3E uses a two-sided paired Wilcoxon signed-rank test within each compartment, BH
+within each compartmen. tPanel 3E uses a two-sided paired Wilcoxon signed-rank test within each compartment, BH
 corrected across the two compartments. Significance threshold q (or p) < 0.1.
 
 ## Inputs
