@@ -16,8 +16,7 @@ controlled for age and sex, since each individual is their own baseline. Ordered
 disease continuum use the Jonckheere-Terpstra test on age+sex residuals (helper in `config.R`).
 
 Folders and scripts carry numeric prefixes matching their manuscript order, and each script is
-named for the panel it produces. All panels are written to the gitignored `figures/` directory,
-and figure source data to `tables/`.
+named for the panel it produces.
 
 ## Main figures
 
