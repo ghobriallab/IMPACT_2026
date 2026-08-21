@@ -5,7 +5,7 @@ immune responses to vaccination"**.
 
 The IMPACT study profiles immune function in myeloma precursor conditions (MGUS and SMM) using
 SARS-CoV-2 vaccination as a controlled in vivo challenge: longitudinal serology in up to 731
-individuals, single-cell RNA sequencing of roughly 1.4 million cells, T cell receptor sequencing
+individuals, single-cell RNA sequencing, T cell receptor sequencing
 and plasma proteomics.
 
 ## Conventions
@@ -63,7 +63,7 @@ Each folder has its own README with the panel inputs and statistics.
 
 ### Zenodo
 
-Processed data are deposited on Zenodo. The concept DOI always resolves to the latest version:
+Processed data are deposited on Zenodo:
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18989222.svg)](https://doi.org/10.5281/zenodo.18989222)
 
@@ -88,7 +88,7 @@ Raw sequencing data are deposited at GEO under accession GSEXXXXXX.
 | [GSE173644](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE173644) | Stephenson et al., *J Immunol* 2022 | Supplementary Figure 4A |
 | [GSE193531](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE193531) | Boiarsky et al., *Nat Commun* 2022 | Supplementary Figure 4B |
 
-The SWIFT-seq per-sample summary, the GSE193531 metadata and count matrix, and the GSE173644 time
+The phs003855 per-sample summary, the GSE193531 metadata and count matrix, and the GSE173644 time
 course all ship in the Zenodo deposit. The GSE124310 sample matrices are the one exception:
 download the GSE124310 supplementary file from GEO and extract it to
 `data/external/zavidij_bm/matrices/`, one directory per sample.
