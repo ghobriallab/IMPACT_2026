@@ -4,11 +4,12 @@ across disease stage, SWIFT-seq cohort (Lightbody et al., Nat Cancer 2025).
 
 Purpose:      Cross-sectional decline of the 15-gene APRIL-responsive module in NON-MALIGNANT
               plasma cells along NBM -> MGUS -> SMM -> NDMM, shown separately for bone marrow and
-              peripheral blood.
+              peripheral blood, adjusted for age and sex as every other cross-sectional comparison
+              in this paper is.
 
 Inputs:       data/external/swiftseq_april_persample_deid.csv -- de-identified per-specimen
-              summary (specimen and participant keys, compartment, disease stage, library count,
-              per-population cell counts and mean module scores). One row is one participant and
+              summary (specimen and participant keys, compartment, disease stage, age, sex,
+              library count, per-population cell counts and mean module scores). One row is one participant and
               one tissue at baseline, with multiple libraries of the same specimen pooled, so the
               panel needs no further de-duplication. Cell-level scoring was performed upstream with
               scanpy sc.tl.score_genes() using the gene list in Supplementary Table 5; source data
@@ -32,6 +33,7 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 from statsmodels.stats.multitest import multipletests
+import statsmodels.formula.api as smf
 import matplotlib as mpl, matplotlib.pyplot as plt
 from matplotlib import font_manager as _fm
 
@@ -73,6 +75,25 @@ def jt(groups):
     return z, 2 * (1 - stats.norm.cdf(abs(z)))
 
 
+def ancova_vs_reference(frame, value_col, group_col, reference, others):
+    """Rank-based ANCOVA: rank(value) ~ group + Age + Sex, matching Figure 3C and the Methods."""
+    d = frame.copy()
+    d['rk'] = d[value_col].rank()
+    m = smf.ols(f'rk ~ C({group_col}, Treatment(reference="{reference}")) + Age + C(Sex)',
+                data=d).fit()
+    return [float(m.pvalues[f'C({group_col}, Treatment(reference="{reference}"))[T.{g}]'])
+            for g in others]
+
+
+def jt_residuals_age_sex(frame, value_col, group_col, order):
+    """Jonckheere-Terpstra on age- and sex-adjusted residuals, matching jt_test_residuals_age_sex()
+    in config.R, which every R figure script uses for its ordered-trend tests."""
+    d = frame.copy()
+    d['rk'] = d[value_col].rank()
+    d['res'] = smf.ols('rk ~ Age + C(Sex)', data=d).fit().resid
+    return jt([d.loc[d[group_col] == g, 'res'].values for g in order])
+
+
 df = pd.read_csv(DATA_DIR / "external" / "swiftseq_april_persample_deid.csv")
 df = df[df.n_normal_PC.fillna(0) >= MIN_CELLS]
 # One row is already one participant per compartment at baseline; assert rather than filter, so a
@@ -80,6 +101,8 @@ df = df[df.n_normal_PC.fillna(0) >= MIN_CELLS]
 assert not df.duplicated(['Patient_ID', 'Compartment']).any(), \
     "input carries more than one specimen per participant per compartment"
 assert df.Disease_Stage.notna().all(), "input carries a specimen with no disease stage"
+# Complete cases for the covariates, since the contrasts are age- and sex-adjusted.
+df = df.dropna(subset=['Age', 'Sex'])
 print(f"{len(df)} specimens from {df.Patient_ID.nunique()} participants "
       f"({int((df.n_libraries > 1).sum())} pooled from multiple libraries)")
 
@@ -87,8 +110,8 @@ fig, axes = plt.subplots(1, 2, figsize=(6.0, 4.6), sharey=True)
 for ax, (key, nice) in zip(axes, COMPS):
     s = df[df.Compartment == key]
     data = [s.loc[s.Disease_Stage == st, 'APRIL_normal'].values for st in ORDER]
-    z, pj = jt(data)
-    ps = [stats.mannwhitneyu(data[0], v, alternative='two-sided').pvalue for v in data[1:]]
+    z, pj = jt_residuals_age_sex(s, 'APRIL_normal', 'Disease_Stage', ORDER)
+    ps = ancova_vs_reference(s, 'APRIL_normal', 'Disease_Stage', ORDER[0], ORDER[1:])
     qs = multipletests(ps, method='fdr_bh')[1]
     print(f"{nice}: n={[len(v) for v in data]}, medians="
           f"{[round(float(np.median(v)), 4) for v in data]}, JT z={z:.3f} p={pj:.3g}, "
@@ -120,6 +143,7 @@ for ax, (key, nice) in zip(axes, COMPS):
     ax.text(np.mean(pos), ymax + 0.50 * yr,
             f"Jonckheere-Terpstra:\nz={z:.2f}, p={pj:.1e}", ha='center', va='bottom',
             fontsize=8, fontstyle='italic')
+    # Both the trend test and the bracketed contrasts above are age- and sex-adjusted.
     ax.set_ylim(ymin - 0.05 * yr, ymax + 0.74 * yr)
     ax.set_title(nice, fontsize=10, pad=5)
     for side in ('top', 'right'):

@@ -17,7 +17,10 @@ Inputs:       data/external/swiftseq_april_persample_deid.csv -- de-identified p
 
               Cohort filtering follows the convention of the source study (Lightbody et al.).
               Secondary tumour clones (Tumor2) are excluded upstream, so a specimen's tumour mean
-              is always its dominant clone.
+              is always its dominant clone. No covariate adjustment is applied or possible here:
+              both populations come from one specimen, so age and sex are identical within a pair
+              and cancel in the within-pair difference. The design is controlled for them by
+              construction, as the paired Olink panels of Figure 5 are.
 
 Outputs:      figures/Figure3E.png (and PDF + SVG).
 
