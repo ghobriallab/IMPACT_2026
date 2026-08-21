@@ -13,13 +13,6 @@ SWIFT-seq bone-marrow and peripheral-blood plasma-cell cohort (Lightbody et al.,
 | 3D | `03_Figure3D.py` | APRIL-responsive module in non-malignant plasma cells across NBM/MGUS/SMM/NDMM, bone marrow and peripheral blood |
 | 3E | `04_Figure3E.py` | APRIL-responsive module in tumor vs non-malignant plasma cells, paired within sample |
 
-Panels 3D and 3E follow the cohort's own convention for the SWIFT-seq data: baseline specimens
-only, plasma cells labelled Normal, Tumor or Tumor1 (secondary tumour clones and unannotated cells
-excluded), and disease stage taken from the cohort's FinalDx. A specimen is one participant and
-one tissue, so the several specimens sequenced as more than one library are pooled rather than
-counted twice, and no participant enters a comparison more than once per compartment. Age and sex
-are carried through from the cohort metadata so that panel 3D can be adjusted for them, as every
-other cross-sectional comparison in the paper is.
 
 ## Statistics
 
