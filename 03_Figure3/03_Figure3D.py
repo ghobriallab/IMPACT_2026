@@ -6,11 +6,18 @@ Purpose:      Cross-sectional decline of the 15-gene APRIL-responsive module in 
               plasma cells along NBM -> MGUS -> SMM -> NDMM, shown separately for bone marrow and
               peripheral blood.
 
-Inputs:       data/external/swiftseq_april_persample_deid.csv -- de-identified per-sample summary
-              (sample and patient keys, compartment, grouped disease stage, serial timepoint index,
-              per-population cell counts and mean module scores). Cell-level scoring was performed
-              upstream with scanpy sc.tl.score_genes() using the gene list in Supplementary Table 5;
-              source data are in dbGaP phs003855.v1.p1 (controlled access).
+Inputs:       data/external/swiftseq_april_persample_deid.csv -- de-identified per-specimen
+              summary (specimen and participant keys, compartment, disease stage, library count,
+              per-population cell counts and mean module scores). One row is one participant and
+              one tissue at baseline, with multiple libraries of the same specimen pooled, so the
+              panel needs no further de-duplication. Cell-level scoring was performed upstream with
+              scanpy sc.tl.score_genes() using the gene list in Supplementary Table 5; source data
+              are in dbGaP phs003855.v1.p1 (controlled access).
+
+              Cohort filtering follows the convention of the source study (Lightbody et al.):
+              baseline specimens only; plasma cells labelled Normal, Tumor or Tumor1, with
+              secondary tumour clones (Tumor2) and unannotated cells excluded; disease stage from
+              the cohort's FinalDx.
 
 Outputs:      figures/Figure3D.png (and PDF + SVG).
 
@@ -68,18 +75,13 @@ def jt(groups):
 
 df = pd.read_csv(DATA_DIR / "external" / "swiftseq_april_persample_deid.csv")
 df = df[df.n_normal_PC.fillna(0) >= MIN_CELLS]
-
-# ONE SAMPLE PER PARTICIPANT PER COMPARTMENT, the earliest serial timepoint, matching Figure 3E.
-# Several participants were sampled repeatedly and would otherwise contribute more than once to
-# a cross-sectional comparison. Ties are technical replicates of the same timepoint and are broken
-# on Sample_ID so the choice is deterministic.
-_before = len(df)
-df = (df.sort_values(['Patient_ID', 'Compartment', 'Timepoint_Index', 'Sample_ID'])
-        .drop_duplicates(['Patient_ID', 'Compartment'], keep='first'))
-print(f"One sample per participant per compartment: kept {len(df)} of {_before} qualifying samples")
-_nostage = int(df.Disease_Stage.isna().sum())
-df = df[df.Disease_Stage.notna()]
-print(f"Excluded {_nostage} samples whose disease stage is not recorded in the source metadata")
+# One row is already one participant per compartment at baseline; assert rather than filter, so a
+# regression in the input surfaces here instead of being silently de-duplicated away.
+assert not df.duplicated(['Patient_ID', 'Compartment']).any(), \
+    "input carries more than one specimen per participant per compartment"
+assert df.Disease_Stage.notna().all(), "input carries a specimen with no disease stage"
+print(f"{len(df)} specimens from {df.Patient_ID.nunique()} participants "
+      f"({int((df.n_libraries > 1).sum())} pooled from multiple libraries)")
 
 fig, axes = plt.subplots(1, 2, figsize=(6.0, 4.6), sharey=True)
 for ax, (key, nice) in zip(axes, COMPS):
