@@ -1,8 +1,8 @@
 # Figure 3: Impaired APRIL signaling in plasma cells
 
 Panels 3B and 3C come from the integrated peripheral-blood scRNA-seq (1,109,633 cells after
-excluding QC-failed cells, doublets and CLL; the deposited object retains these under explicit
-labels so the cohort stays traceable). Platelets are kept in this embedding and shown for
+excluding QC-failed cells, doublets; the deposited object retains these under explicit
+labels so the cohort stays traceable). Platelets and plasma cells are kept in this embedding and shown for
 completeness; they are excluded from the downstream analyses. Panels 3D and 3E come from the
 SWIFT-seq bone-marrow and peripheral-blood plasma-cell cohort (Lightbody et al., Nat Cancer 2025).
 
@@ -24,8 +24,7 @@ counted twice, and no participant enters a comparison more than once per compart
 Panel 3C uses age- and sex-adjusted rank-based ANCOVA against HD, Benjamini-Hochberg corrected
 across the six contrasts of the panel. Panel 3D uses a two-sided Jonckheere-Terpstra ordered-trend
 test across NBM to NDMM, plus two-sided Wilcoxon rank-sum contrasts against NBM with BH correction
-within each compartment; the external cohort carries no age or sex metadata, so these are
-unadjusted. Panel 3E uses a two-sided paired Wilcoxon signed-rank test within each compartment, BH
+within each compartmen. tPanel 3E uses a two-sided paired Wilcoxon signed-rank test within each compartment, BH
 corrected across the two compartments. Significance threshold q (or p) < 0.1.
 
 ## Inputs

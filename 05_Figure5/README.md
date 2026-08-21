@@ -16,11 +16,7 @@ controlled for age and sex, since each individual is their own baseline. Olink q
 the panel-wide Benjamini-Hochberg family of 156 tests (52 analytes x 3 disease groups) defined in
 `01_Figure5AB.R` and inherited by `03_Figure5DEF.R`, matching the Methods. The IL-1B signature is
 scored on cells re-normalized from the counts layer against a 2,678-HVG control pool, after
-excluding QC-failed cells, platelets and platelet-containing doublets, plasma cells and CLL;
-other doublet categories are retained. Significance threshold q (or p) < 0.1.
-
-The single MGUS participant with prior systemic therapy is excluded from the Olink panels, which
-are restricted to treatment-naive individuals.
+excluding QC-failed cells, platelets and platelet-containing doublets, plasma cells. Significance threshold q (or p) < 0.1.
 
 ## Inputs
 
@@ -29,8 +25,6 @@ are restricted to treatment-naive individuals.
 | `data/olink/olink_cytokines.csv` | 5A, 5B, 5D, 5E, 5F |
 | `scRNAseq_IMPACT_Zenodo.h5ad`, `data/hvg_2678_genes.txt`, `data/il1b_response_genes_human.csv` | 5C |
 
-All inputs come from the Zenodo deposit (DOI [10.5281/zenodo.18989222](https://doi.org/10.5281/zenodo.18989222));
-see the root README for the expected `data/` layout and for where to point `SCRNA_DIR`.
 
 ## Run
 

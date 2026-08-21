@@ -22,9 +22,6 @@ method) and a leave-one-out sensitivity analysis. Panel 2G reports paired Wilcox
 q-values, BH corrected across its four sub-panels, annotated with the median linear fold-change.
 Significance threshold q (or p) < 0.1.
 
-The single MGUS participant with prior systemic therapy is excluded from the Olink panels, which
-are restricted to treatment-naive individuals.
-
 ## Inputs
 
 | File | Panels |
