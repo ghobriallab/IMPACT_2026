@@ -3,29 +3,34 @@
 
 Design:
   - Panels A-C: tier reproduction of Fig 1B / 1C / 1F. Columns are HD / MGUS / LR-SMM /
-    IR-SMM / HR-SMM / MM. HD, MGUS, MM use the FULL eligible ELISA cohort. SMM is filtered
-    to the 20/2/20 risk-classed subset (the metadata union with the older scRNA shipping-status
-    file was rejected after audit -- 10/11 patients DISAGREED across the two curators).
-    EACH SMM TIER COLUMN'S n LABEL IS ANNOTATED WITH THE NUMBER OF TREATED PATIENTS in
-    parentheses, so the treatment confound is visible. Treatment confounding is severe in
-    HR-SMM (4/4 treated at peak post-2nd dose; this cohort enrolled HR-SMM predominantly
-    in treatment-arm contexts) and notable in IR/LR-SMM, which is why we cannot use
-    SupFig1 to detect a clean tier-stratified vaccine-response gradient at peak.
+    IR-SMM / HR-SMM / MM. HD, MGUS and MM use the FULL eligible ELISA cohort; MM are all
+    treated, as in Figure 1. SMM is restricted to TREATMENT-NAIVE participants only.
+    Previously treated SMM were removed because the treated fraction rose with risk tier
+    (at peak post-2nd dose, 6/8 LR, 5/7 IR and 4/4 HR were treated), so any tier gradient
+    was inseparable from a treatment gradient.
+  - The 20/2/20 tier is computed IN PLACE from the three IMWG criteria carried in the
+    ELISA tables themselves (M_spike >= 2 g/dL, FLC_ratio >= 20, BM_PC >= 20%): 0 factors
+    LR, 1 factor IR, >=2 factors HR. A participant is classified only when all three
+    components are present. This replaces the previous external bridge derived from a
+    genomics reference cohort, which covered only 48 of 241 SMM and carried an assessment
+    a median of about two years before vaccination. Computing in place roughly triples the
+    treatment-naive n per tier and, for untreated participants, uses a contemporaneous
+    rather than a historical assessment.
   - Continuous tumor-burden panels were dropped after the user judged the
     M-spike / BM PC% / FLC ratio scatters within treatment-naive SMM to be
     underpowered and inconclusive across metrics (M-spike rho=-0.21 p=0.28,
     BM PC% rho=+0.15 p=0.48, FLC ratio rho=-0.31 p=0.081); the numerical
     results are reported in the manuscript text and in the response letter only.
-  - Cytogenetics panels are NOT included: only 4 untreated risk-classed SMM
-    at peak; n_pos <= 2 per CNA, not testable.
+  - Cytogenetics panels are NOT included: copy-number calls linked to only 68 of the
+    731 serology participants, and n_pos <= 2 per CNA among risk-classed SMM.
   - Fig 1E (waning slope) NOT reproduced -- per-tier serial-sample n = 2-6.
   - Age + sex adjustment via rank-based ANCOVA (Fig 1 main convention). JT ordered-trend
     test on age+sex residuals across HD < MGUS < LR-SMM < IR-SMM < HR-SMM; "Jonckheere-Terpstra"
     spelled out in full per manuscript convention. Statistics drawn IN-PANEL as brackets.
 
-Purpose:      Supplementary Figure 1: vaccine response by SMM 20/2/20 risk tier. Three panels (Fig 1B/C/F equivalents) split SMM into LR/IR/HR with per-tier n labels annotating treated/treatment-naive counts; statistics use age+sex-adjusted rank-based ANCOVA + JT ordered-trend on HD<MGUS<LR<IR<HR.
+Purpose:      Supplementary Figure 1: vaccine response by SMM 20/2/20 risk tier, in treatment-naive SMM only. Three panels (Fig 1B/C/F equivalents) split treatment-naive SMM into LR/IR/HR using the IMWG 20/2/20 criteria computed from the M-spike, BM plasma cell percentage and free light chain ratio recorded in the ELISA tables; statistics use age+sex-adjusted rank-based ANCOVA + JT ordered-trend on HD<MGUS<LR<IR<HR.
 
-Inputs:       data/elisa/elisa_spike_post2nd.csv, data/elisa/elisa_spike_post3rd.csv, data/smm_risk_strat.csv (de-identified 20/2/20 tier table).
+Inputs:       data/elisa/elisa_spike_post2nd.csv, data/elisa/elisa_spike_post3rd.csv (both carry M_spike, BM_PC and FLC_ratio, from which the 20/2/20 tier is computed).
 
 Outputs:      figures/SupFig1.png.
 
@@ -49,29 +54,45 @@ RNG_SEED = 2026
 
 ELISA_2ND = DATA_DIR / 'elisa' / 'elisa_spike_post2nd.csv'
 ELISA_3RD = DATA_DIR / 'elisa' / 'elisa_spike_post3rd.csv'
-RISK      = DATA_DIR / 'smm_risk_strat.csv'
+
+# IMWG 20/2/20 thresholds
+MSPIKE_CUT, FLC_CUT, BMPC_CUT = 2.0, 20.0, 20.0
 
 TIER_ORDER  = ['HD', 'MGUS', 'LRSMM', 'IRSMM', 'HRSMM', 'MM']
 TIER_LABELS = {'HD':'HD', 'MGUS':'MGUS', 'LRSMM':'LR-SMM', 'IRSMM':'IR-SMM',
                'HRSMM':'HR-SMM', 'MM':'MM'}
 TIER_COLORS = ['steelblue','orange','#FCD0A1','#EE5C42','#8B0000','#458B00']
 
-risk = pd.read_csv(RISK)
-
 # Helpers ---
+def tier_2_20(df):
+    """IMWG 20/2/20 tier from the three criteria carried in the ELISA tables.
+
+    Counts risk factors (M-spike >= 2 g/dL, involved:uninvolved FLC ratio >= 20,
+    bone marrow plasma cells >= 20%): 0 -> LRSMM, 1 -> IRSMM, >=2 -> HRSMM.
+    Returns NaN unless all three components are present, so a participant is never
+    classified on partial information.
+    """
+    v = df[['M_spike', 'BM_PC', 'FLC_ratio']].apply(pd.to_numeric, errors='coerce')
+    n = ((v['M_spike'] >= MSPIKE_CUT).astype(float)
+         + (v['FLC_ratio'] >= FLC_CUT).astype(float)
+         + (v['BM_PC'] >= BMPC_CUT).astype(float))
+    n[v.isna().any(axis=1)] = np.nan
+    return n.map({0.0: 'LRSMM', 1.0: 'IRSMM', 2.0: 'HRSMM', 3.0: 'HRSMM'})
+
 def make_panel_df(elisa_file, t_lo, t_hi, day_col):
     """Per-patient first-sample DataFrame.
 
-    NOTE: All risk-classed SMM are KEPT regardless of treatment status
-    for the tier panels; the treatment count per tier is annotated in the x-label so
-    the confound is transparent.
+    NOTE: SMM is restricted to TREATMENT-NAIVE participants (Ever_treated == 'No').
+    Previously treated SMM are dropped because the treated fraction rose with risk tier,
+    which made any tier gradient inseparable from a treatment gradient. HD, MGUS and MM
+    use the full eligible cohort, matching Figure 1.
     """
     d = pd.read_csv(elisa_file)
     d = d[(d[day_col] >= t_lo) & (d[day_col] <= t_hi)].copy()
     d = d.sort_values(['Common_ID', day_col]).drop_duplicates('Common_ID', keep='first')
     d['Group'] = d['Disease'].map({'Healthy':'HD','MGUS':'MGUS','IgM-MGUS':'MGUS','MM':'MM','SMM':None})
-    smm_rows = d['Disease'] == 'SMM'
-    d.loc[smm_rows, 'Group'] = d.loc[smm_rows, 'Common_ID'].map(risk.set_index('Common_ID')['SMM_risk'])
+    smm_naive = (d['Disease'] == 'SMM') & (d['Ever_treated'] == 'No')
+    d.loc[smm_naive, 'Group'] = tier_2_20(d.loc[smm_naive])
     return d[d['Group'].isin(TIER_ORDER)]
 
 def jt_trend(df, value_col, group_col, order, adjust_with):
@@ -129,7 +150,7 @@ def draw_bracket(ax, x1, x2, y, label, tip_frac=0.012, fontsize=7.2, linewidth=0
             fontsize=fontsize, clip_on=False)
 
 # ============================================================
-# Tier panels A/B/C, the Figure 1B / 1C / 1F equivalents (all risk-classed SMM, treatment annotated)
+# Tier panels A/B/C, the Figure 1B / 1C / 1F equivalents (treatment-naive SMM only)
 # ============================================================
 b = make_panel_df(ELISA_2ND, 14, 60,    'Days_post2nd')
 c = make_panel_df(ELISA_2ND, 60.0001, 120, 'Days_post2nd')
@@ -138,13 +159,11 @@ f_ = make_panel_df(ELISA_3RD, 0, 100000, 'Days_post3rd')
 def tier_panel_data(df):
     d = df.dropna(subset=['ELISA_Titer'])
     counts = {t: (d['Group']==t).sum() for t in TIER_ORDER}
-    treated = {t: ((d['Group']==t) & (d.get('Ever_treated','') == 'Yes')).sum()
-               for t in TIER_ORDER}
     q = adjusted_q_vs_hd(d, 'ELISA_Titer', 'Group')
     z, p_jt, _ = jt_trend(d, 'ELISA_Titer', 'Group',
                           order=['HD','MGUS','LRSMM','IRSMM','HRSMM'],
                           adjust_with=['Age','Sex'])
-    return {'df': d, 'counts': counts, 'treated': treated, 'q': q, 'jt_z': z, 'jt_p': p_jt}
+    return {'df': d, 'counts': counts, 'q': q, 'jt_z': z, 'jt_p': p_jt}
 
 tier_results = [
     ('A', tier_panel_data(b),  '2 weeks – 2 months\npost-2nd dose (Fig 1B)'),
@@ -176,11 +195,7 @@ for col, (lbl, r, title) in enumerate(tier_results):
     ax.set_xticks(range(len(TIER_ORDER)))
     xlab = []
     for t in TIER_ORDER:
-        ntot = r['counts'][t]; ntx = r['treated'][t]
-        if t in ('LRSMM','IRSMM','HRSMM') and ntot > 0:
-            xlab.append(f"{TIER_LABELS[t]}\n(n={ntot}; {ntx} tx)")
-        else:
-            xlab.append(f"{TIER_LABELS[t]}\n(n={ntot})")
+        xlab.append(f"{TIER_LABELS[t]}\n(n={r['counts'][t]})")
     ax.set_xticklabels(xlab, fontsize=8.5, rotation=30, ha='right')
     if col == 0: ax.set_ylabel('Spike IgG titer (OD$_{450-570}$)', fontsize=10)
     ax.set_title(title, fontsize=10.5, fontweight='bold', pad=6)
@@ -205,7 +220,7 @@ for lbl, spec in [('A', gs[0,0]),('B', gs[0,1]),('C', gs[0,2])]:
     pos = spec.get_position(fig)
     fig.text(pos.x0 - 0.012, pos.y1 + 0.005, lbl, fontsize=13, fontweight='bold')
 
-fig.suptitle('Vaccine response by SMM 20/2/20 risk tier (treated counts annotated under n)',
+fig.suptitle('Vaccine response by SMM 20/2/20 risk tier, treatment-naive SMM only',
              fontsize=11.5, fontweight='bold', y=0.96)
 
 OUT_PNG = FIGURES_DIR / 'SupFig1.png'
@@ -215,16 +230,12 @@ plt.savefig(str(OUT_PNG).replace('.png','.svg'), bbox_inches='tight')
 print(f"\nSaved: {OUT_PNG}")
 
 # Console dump ---
-print("\n=== TIER PANELS (all risk-classed SMM, treated count annotated) ===")
+print("\n=== TIER PANELS (treatment-naive SMM only; 20/2/20 computed from M-spike, BM PC%, FLC ratio) ===")
 for lbl, r, title in tier_results:
     print(f"  {lbl} ({title.splitlines()[0]}):")
-    print(f"    counts (treated/total):")
+    print(f"    counts:")
     for t in TIER_ORDER:
-        nt = r['counts'][t]; tr = r['treated'][t]
-        if t in ('LRSMM','IRSMM','HRSMM'):
-            print(f"      {TIER_LABELS[t]:8s} n={nt:3d}  treated={tr}/{nt}")
-        else:
-            print(f"      {TIER_LABELS[t]:8s} n={nt:3d}")
+        print(f"      {TIER_LABELS[t]:8s} n={r['counts'][t]:3d}")
     q_items = ', '.join([f"{k}={v:.3g}" for k, v in r['q'].items()])
     print(f"    q vs HD (age+sex adj, BH): {{ {q_items} }}")
     print(f"    JT (HD→HR-SMM): z={r['jt_z']:.2f}, p={r['jt_p']:.4g}")

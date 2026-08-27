@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Supplementary Figure 4B: APRIL-responsive gene module score in non-malignant bone-marrow
+"""Supplementary Figure 4C: APRIL-responsive gene module score in non-malignant bone-marrow
 plasma cells across NBM -> MGUS -> SMM (Boiarsky et al. 2022, GSE193531).
 
 Purpose:      Published-cohort validation of the APRIL-responsive gene module in the bystander
@@ -14,7 +14,7 @@ Inputs:       data/external/GSE193531_umi-count-matrix.csv.gz and
               data/external/GSE193531_cell-level-metadata.csv, the latter carrying the CNV-based
               malignant calls used here only to exclude malignant cells.
 
-Outputs:      figures/SupFig4B.png (and PDF + SVG).
+Outputs:      figures/SupFig4C.png (and PDF + SVG).
 
 Dependencies: Python + scanpy, numpy, pandas, scipy, matplotlib; reads config.py.
 """
@@ -250,6 +250,6 @@ ax.set_title('Non-malignant BM plasma cells (Boiarsky GSE193531)',
 ax.spines['top'].set_visible(False); ax.spines['right'].set_visible(False)
 
 plt.tight_layout()
-save_figure("SupFig4B")
+save_figure("SupFig4C")
 plt.close()
 

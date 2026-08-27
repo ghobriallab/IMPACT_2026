@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Supplementary Figure 4A: validation of the APRIL-responsive gene signature (GSE173644).
+"""Supplementary Figures 4A and 4B: validation of the APRIL-responsive gene signature (GSE173644).
 
 Purpose:      External validation of the 15-gene APRIL-responsive module in an in-vitro APRIL
               stimulation time course of human B cells (Stephenson et al., J Immunol 2022),
@@ -7,7 +7,7 @@ Purpose:      External validation of the 15-gene APRIL-responsive module in an i
 
 Inputs:       data/external/GSE173644_timecourse.txt.gz, which ships in the Zenodo deposit.
 
-Outputs:      figures/SupFig4A.png, signature-score boxes by condition.
+Outputs:      figures/SupFig4AB.png, signature-score boxes by condition.
 
 Dependencies: Python + pandas, numpy, matplotlib, seaborn, scipy, statsmodels; reads config.py.
 """
@@ -159,6 +159,6 @@ fig.text(0.5, 0.955, f'{n_sig}/15 genes significantly upregulated at 120 min (pa
          ha='center', fontsize=10, color='#555555')
 
 plt.tight_layout(rect=[0, 0, 1, 0.94])
-plt.savefig(FIGURES_DIR / "SupFig4A.png", dpi=300, bbox_inches='tight', facecolor='white')
+plt.savefig(FIGURES_DIR / "SupFig4AB.png", dpi=300, bbox_inches='tight', facecolor='white')
 plt.close()
-print("Saved: SupFig4A.png")
+print("Saved: SupFig4AB.png")

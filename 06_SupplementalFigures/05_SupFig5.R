@@ -76,12 +76,12 @@ stat_ship <- smm_ship_paired %>%
   add_y_position(formula = COVID_mean_prop ~ Shipping_Status,
                  data = smm_ship_paired, fun = "max", step.increase = 0.1)
 
-# n labels (computed at the pre-vaccination timepoint to mirror the legacy figure)
+# n labels, counted separately for each timepoint. These previously came from the
+# pre-vaccination facet alone and were then reused for both facets via scale_x_discrete,
+# which mislabelled the post-vaccination not-shipped group as n=5 when it is n=6.
 shipment_counts <- smm_ship_paired %>%
-  filter(VaccineTimepoint == "1") %>%
-  count(Shipping_Status)
-n_shipped     <- shipment_counts$n[shipment_counts$Shipping_Status == "1"]
-n_not_shipped <- shipment_counts$n[shipment_counts$Shipping_Status == "2"]
+  count(VaccineTimepoint, Shipping_Status) %>%
+  mutate(n_label = paste0("n=", n))
 
 timepoint_labels <- c("1" = "Pre-Vx", "2" = "Post-Vx")
 
@@ -97,10 +97,11 @@ p_ship <- smm_ship_paired %>%
                   position = position_jitter(width = 0.2),
                   shape = 21, show.legend = FALSE) +
   scale_fill_manual(values = c("steelblue", "tomato2")) +
-  scale_x_discrete(labels = c(
-    "1" = paste0("Shipped\n(n=", n_shipped, ")"),
-    "2" = paste0("Not Shipped\n(n=", n_not_shipped, ")")
-  )) +
+  scale_x_discrete(labels = c("1" = "Shipped", "2" = "Not Shipped")) +
+  # drawn as a layer rather than baked into the axis labels, so each facet shows its own n
+  geom_text(data = shipment_counts,
+            aes(x = Shipping_Status, y = -Inf, label = n_label),
+            inherit.aes = FALSE, vjust = -0.9, size = 3.9, family = FONT) +
   facet_grid(~ VaccineTimepoint, scales = "free",
              labeller = labeller(VaccineTimepoint = timepoint_labels)) +
   stat_pvalue_manual(stat_ship, label = "p = {p}", hide.ns = FALSE) +

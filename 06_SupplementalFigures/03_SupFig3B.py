@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Supplementary Figure 3B: Figure 3C reproduced on shipped samples only.
 
-Purpose:      Shipment control for Figure 3C, part two. Figure 3C reports no
+Purpose:      Shipment control for Figure 3C. Figure 3C reports no
               difference in myeloid TNFSF13 (APRIL) expression between disease groups. Because
               shipment is unevenly distributed across those groups (every healthy donor and all
               but one participant with MGUS was shipped, whereas SMM is mixed), that null could
               in principle be produced by shipment rather than by biology. This panel repeats
               Figure 3C using only samples documented as shipped, holding shipment constant.
               The contrasts remain non-significant, so the negative result is not a shipment
-              artifact. Panel A shows the shipment effect itself.
+              artifact.
 
 Inputs:       H5AD_NORM (scRNAseq_IMPACT_Zenodo.h5ad) for TNFSF13 expression and cell labels;
               data/metadata/Supplementary_Table_4_scRNAseq_sample_list.csv for Shipment_FedEx

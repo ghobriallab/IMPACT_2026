@@ -47,13 +47,12 @@ named for the panel it produces.
 
 | Panel | Script | Description |
 |-------|--------|-------------|
-| S1 | `06_SupplementalFigures/01_SupFig1.py` | Vaccine response by SMM 20/2/20 risk tier |
+| S1 | `06_SupplementalFigures/01_SupFig1.py` | Vaccine response by SMM 20/2/20 risk tier, treatment-naive SMM |
 | S2 | `06_SupplementalFigures/02_SupFig2.py` | Per-lineage annotation UMAPs and marker heatmaps |
-| S3A | `06_SupplementalFigures/03_SupFig3A.py` | Myeloid TNFSF13 by shipment status, SMM |
+| S3A | `06_SupplementalFigures/03_SupFig3A.py` | Bone-marrow myeloid TNFSF13 (Zavidij, GSE124310) |
 | S3B | `06_SupplementalFigures/03_SupFig3B.py` | Figure 3C on shipped samples only |
-| S3C | `06_SupplementalFigures/03_SupFig3C.py` | Bone-marrow myeloid TNFSF13 (Zavidij, GSE124310) |
-| S4A | `06_SupplementalFigures/04_SupFig4A.py` | APRIL signature in stimulated plasmablasts (GSE173644) |
-| S4B | `06_SupplementalFigures/04_SupFig4B.py` | APRIL module in marrow plasma cells (Boiarsky, GSE193531) |
+| S4A, S4B | `06_SupplementalFigures/04_SupFig4AB.py` | APRIL signature in stimulated plasmablasts (GSE173644) |
+| S4C | `06_SupplementalFigures/04_SupFig4C.py` | APRIL module in marrow plasma cells (Boiarsky, GSE193531) |
 | S5 | `06_SupplementalFigures/05_SupFig5.R` | Shipment control for Figure 4B |
 | S6 | `06_SupplementalFigures/06_SupFig6.py` | Shipment control for Figure 5C |
 
@@ -105,8 +104,7 @@ data/
 ├── metadata/       Supplementary_Table_4_scRNAseq_sample_list.csv, metadata_deidentified.csv
 ├── external/       SWIFT-seq summary, GSE193531, GSE173644, teclistamab Olink, zavidij_bm/
 ├── hvg_2678_genes.txt
-├── il1b_response_genes_human.csv
-└── smm_risk_strat.csv
+└── il1b_response_genes_human.csv
 ```
 
 The single-cell objects go anywhere you like; point `SCRNA_DIR` at their directory.
@@ -142,7 +140,7 @@ Scripts are independent, with one exception: `05_Figure5/03_Figure5DEF.R` source
 
 These read the single-cell object and need the memory to match: `03_Figure3/01_Figure3B.py`,
 `03_Figure3/02_Figure3C.py`, `05_Figure5/02_Figure5C.py`,
-`06_SupplementalFigures/02_SupFig2.py`, `03_SupFig3A.py`, `03_SupFig3B.py` and `06_SupFig6.py`. Every other script
+`06_SupplementalFigures/02_SupFig2.py`, `03_SupFig3B.py` and `06_SupFig6.py`. Every other script
 runs from the tabular inputs.
 
 ## Reproducibility check
